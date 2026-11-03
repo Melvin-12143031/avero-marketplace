@@ -1,0 +1,41 @@
+-- Users
+CREATE TRIGGER set_users_updated_at
+BEFORE UPDATE ON users
+FOR EACH ROW
+EXECUTE FUNCTION update_updated_at();
+
+-- Products
+CREATE TRIGGER set_products_updated_at
+BEFORE UPDATE ON products
+FOR EACH ROW
+EXECUTE FUNCTION update_updated_at();
+
+-- Orders
+CREATE TRIGGER set_orders_updated_at
+BEFORE UPDATE ON orders
+FOR EACH ROW
+EXECUTE FUNCTION update_updated_at();
+
+-- Addresses
+CREATE TRIGGER set_addresses_updated_at
+BEFORE UPDATE ON addresses
+FOR EACH ROW
+EXECUTE FUNCTION update_updated_at();
+
+-- Payments
+CREATE TRIGGER set_payments_updated_at
+BEFORE UPDATE ON payments
+FOR EACH ROW
+EXECUTE FUNCTION update_updated_at();
+
+-- Reviews
+CREATE TRIGGER set_reviews_updated_at
+BEFORE UPDATE ON reviews
+FOR EACH ROW
+EXECUTE FUNCTION update_updated_at();
+
+-- Cart Items
+CREATE TRIGGER set_cart_items_updated_at
+BEFORE UPDATE ON cart_items
+FOR EACH ROW
+EXECUTE FUNCTION update_updated_at();

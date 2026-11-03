@@ -1,0 +1,5 @@
+ALTER TABLE reviews
+ADD CONSTRAINT reviews_order_owner_fk
+FOREIGN KEY (order_id, user_id)
+REFERENCES orders (id, user_id)
+ON DELETE CASCADE;

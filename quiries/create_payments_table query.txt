@@ -1,0 +1,26 @@
+CREATE TABLE payments (
+    id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+
+    order_id UUID NOT NULL
+        REFERENCES orders(id) ON DELETE CASCADE,
+
+    payment_method VARCHAR(30) NOT NULL
+        CHECK (
+            payment_method IN ('gcash', 'maya', 'card', 'bank_transfer', 'cash_on_delivery')
+        ),
+
+    payment_reference VARCHAR(255) UNIQUE,
+
+    amount NUMERIC(10, 2) NOT NULL
+        CHECK (amount > 0),
+
+    status VARCHAR(30) NOT NULL DEFAULT 'pending'
+        CHECK (
+            status IN ('pending', 'paid', 'failed', 'refunded', 'cancelled')
+        ),
+
+    paid_at TIMESTAMPTZ,
+
+    created_at TIMESTAMPTZ NOT NULL DEFAULT CURRENT_TIMESTAMP,
+    updated_at TIMESTAMPTZ NOT NULL DEFAULT CURRENT_TIMESTAMP
+);

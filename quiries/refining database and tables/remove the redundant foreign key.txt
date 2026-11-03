@@ -1,0 +1,2 @@
+ALTER TABLE reviews
+DROP CONSTRAINT reviews_order_id_fkey;
