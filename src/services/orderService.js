@@ -5,7 +5,7 @@ export const createOrder = async (shippingInfo, cartItems) => {
     customer: {
       fullName: shippingInfo.fullName.trim(),
       email: shippingInfo.email.trim(),
-      Phone: shippingInfo.phone.trim(),
+      phone: shippingInfo.phone.trim(),
     },
 
     shippingAddress: {
@@ -30,7 +30,6 @@ export const createOrder = async (shippingInfo, cartItems) => {
 
 export const getOrders = async () => {
   const response = await apiRequest("/orders");
-
   return response.data.orders;
 };
 
@@ -53,6 +52,16 @@ export const getOrderById = async (orderId) => {
       name: item.product_name,
       price: item.unit_price,
     })),
+
+    payment: order.payment
+      ? {
+          ...order.payment,
+          paymentMethod: order.payment.payment_method,
+          paymentReference: order.payment.payment_reference,
+          paidAt: order.payment.paid_at,
+          paymentCreatedAt: order.payment.created_at,
+        }
+      : null,
   };
 };
 
@@ -61,4 +70,44 @@ export const formatPrice = (amount) => {
     minimumFractionDigits: 2,
     maximumFractionDigits: 2,
   })}`;
+};
+
+export const getAdminOrders = async (
+  page = 1,
+  limit = 10,
+  status = "",
+  search = "",
+) => {
+  const params = new URLSearchParams({
+    page: String(page),
+    limit: String(limit),
+  });
+
+  if (status) {
+    params.set("status", status);
+  }
+
+  if (search) {
+    params.set("search", search);
+  }
+
+  const response = await apiRequest(`/orders/admin/all?${params.toString()}`);
+
+  return {
+    orders: response.data.orders,
+    pagination: response.pagination,
+  };
+};
+
+export const getOrderStatistics = async () => {
+  const response = await apiRequest(`/orders/admin/statistics`);
+  return response.data.statistics;
+};
+
+export const updateOrderStatus = async (orderId, status) => {
+  const response = await apiRequest(`/orders/${orderId}/status`, {
+    method: "PATCH",
+    body: JSON.stringify({ status }),
+  });
+  return response.data.order;
 };

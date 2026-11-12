@@ -13,4 +13,17 @@ const getAllCategories = async () => {
   return result.rows;
 };
 
-export { getAllCategories };
+const createCategory = async ({ name, description }) => {
+  const result = await pool.query(
+    `
+      INSERT INTO categories (name, description)
+      VALUES ($1, $2)
+      RETURNING *
+    `,
+    [name, description],
+  );
+
+  return result.rows[0];
+};
+
+export { getAllCategories, createCategory };

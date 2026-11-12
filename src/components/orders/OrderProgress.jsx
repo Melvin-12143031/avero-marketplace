@@ -13,6 +13,8 @@ const OrderProgress = ({ status }) => {
         { label: 'Delivered', icon: Home },
     ]
 
+
+
     const normalizedStatus = status?.toLowerCase()
 
     const statusOrder = {
@@ -75,7 +77,7 @@ const OrderProgress = ({ status }) => {
                                         Order progress is currently unavailable.
                                     </p>
                                 )}
-                                
+
                             </div>
                         </div>
                     )

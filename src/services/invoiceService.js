@@ -1,159 +1,566 @@
-import { jsPDF } from 'jspdf'
-import { formatPrice } from './orderService'
+import pdfMake from "pdfmake/build/pdfmake";
+import pdfFonts from "pdfmake/build/vfs_fonts";
+import { formatPrice } from "./orderService";
+
+pdfMake.addVirtualFileSystem(pdfFonts);
+
+const getPaymentMethodLabel = (method) => {
+  const methods = {
+    cash_on_delivery: "Cash on Delivery",
+    gcash: "GCash",
+    card: "Credit / Debit Card",
+  };
+
+  return methods[method] || "Not specified";
+};
+
+const formatInvoiceDate = (date) => {
+  if (!date) return "—";
+
+  return new Date(date).toLocaleDateString("en-PH", {
+    year: "numeric",
+    month: "long",
+    day: "numeric",
+  });
+};
+
+const getShippingAddress = (address = {}) => {
+  return [address.address, address.city, address.province, address.postalCode]
+    .filter(Boolean)
+    .join(", ");
+};
 
 export const generateInvoice = (order) => {
-    const doc = new jsPDF({
-        orientation: 'portrait',
-        unit: 'mm',
-        format: 'a4',
-    })
+  const payment = order.payment || null;
+  const customer = order.customer || {};
+  const shippingAddress = order.shippingAddress || {};
 
-        // Invoice Header
-    doc.setFont('helvetica', 'bold')
-    doc.setFontSize(24)
-    doc.setTextColor(79, 70, 229)
-    doc.text('MARKETPLACE', 20, 25)
+  const items = order.items || [];
 
-    doc.setFontSize(18)
-    doc.setTextColor(30, 41, 59)
-    doc.text('INVOICE', 190, 25, { align: 'right' })
+  const subtotal = Number(order.subtotal || 0);
+  const shippingFee = Number(order.shippingFee || 0);
+  const total = Number(order.total || 0);
 
-    // Order Information
-    doc.setFontSize(10)
-    doc.setFont('helvetica', 'normal')
-    doc.setTextColor(100, 116, 139)
+  const productRows = items.map((item) => {
+    const quantity = Number(item.quantity || 0);
+    const price = Number(item.price ?? item.unit_price ?? 0);
+    const itemTotal = price * quantity;
 
-    doc.text(`Order Reference: ${order.id}`, 20, 40)
+    return [
+      {
+        text: item.name || item.product_name || "Product",
+        style: "tableCell",
+      },
+      {
+        text: String(quantity),
+        style: "tableCell",
+        alignment: "center",
+      },
+      {
+        text: formatPrice(price),
+        style: "tableCell",
+        alignment: "right",
+      },
+      {
+        text: formatPrice(itemTotal),
+        style: "tableCellBold",
+        alignment: "right",
+      },
+    ];
+  });
 
-    doc.text(
-        `Invoice Date: ${new Date(order.createdAt).toLocaleDateString('en-PH', {
-            dateStyle: 'medium',
-        })}`,
-        20,
-        47,
-    )
+  const documentDefinition = {
+    pageSize: "A4",
 
-    // Header Divider
-    doc.setDrawColor(226, 232, 240)
-    doc.line(20, 55, 190, 55)
+    pageMargins: [40, 45, 40, 60],
 
-        // Customer Information
-    doc.setFont('helvetica', 'bold')
-    doc.setFontSize(11)
-    doc.setTextColor(30, 41, 59)
+    info: {
+      title: `Invoice ${order.orderNumber || order.id}`,
+      author: "Marketplace",
+      subject: "Customer Order Invoice",
+    },
 
-    doc.text('BILL TO', 20, 68)
-    doc.text('SHIP TO', 115, 68)
+    defaultStyle: {
+      font: "Roboto",
+      fontSize: 9,
+      color: "#334155",
+    },
 
-    // Bill To
-    doc.setFont('helvetica', 'normal')
-    doc.setFontSize(10)
-    doc.setTextColor(71, 85, 105)
+    content: [
+      // Invoice Header
+      {
+        columns: [
+          {
+            width: "*",
+            stack: [
+              {
+                text: "MARKETPLACE",
+                style: "brand",
+              },
+              {
+                text: "Your trusted online shopping destination",
+                style: "brandSubtitle",
+              },
+            ],
+          },
+          {
+            width: "auto",
+            stack: [
+              {
+                text: "INVOICE",
+                style: "invoiceTitle",
+                alignment: "right",
+              },
+              {
+                text: "OFFICIAL ORDER RECEIPT",
+                style: "invoiceSubtitle",
+                alignment: "right",
+              },
+            ],
+          },
+        ],
+      },
 
-    doc.text(order.customer.fullName, 20, 77)
-    doc.text(order.customer.email, 20, 84)
-    doc.text(order.customer.phone, 20, 91)
+      {
+        canvas: [
+          {
+            type: "line",
+            x1: 0,
+            y1: 0,
+            x2: 515,
+            y2: 0,
+            lineWidth: 1,
+            lineColor: "#E2E8F0",
+          },
+        ],
+        margin: [0, 15, 0, 18],
+      },
 
-    // Ship To
-    doc.text(order.shippingAddress.address, 115, 77)
+      // Order Details
+      {
+        columns: [
+          {
+            width: "*",
+            stack: [
+              {
+                text: "ORDER NUMBER",
+                style: "sectionLabel",
+              },
+              {
+                text: order.orderNumber || order.id || "—",
+                style: "orderValue",
+              },
+            ],
+          },
+          {
+            width: "*",
+            stack: [
+              {
+                text: "INVOICE DATE",
+                style: "sectionLabel",
+              },
+              {
+                text: formatInvoiceDate(order.createdAt),
+                style: "orderValue",
+              },
+            ],
+          },
+          {
+            width: "*",
+            stack: [
+              {
+                text: "ORDER STATUS",
+                style: "sectionLabel",
+              },
+              {
+                text: order.status || "Pending",
+                style: "orderValue",
+              },
+            ],
+          },
+        ],
+        margin: [0, 0, 0, 22],
+      },
 
-    doc.text(
-        `${order.shippingAddress.city}, ${order.shippingAddress.province}`,
-        115,
-        84,
-    )
+      // Customer and Shipping Information
+      {
+        columns: [
+          {
+            width: "*",
+            stack: [
+              {
+                text: "BILL TO",
+                style: "sectionTitle",
+              },
+              {
+                text: customer.fullName || "Customer",
+                style: "detailBold",
+              },
+              {
+                text: customer.email || "—",
+                style: "detail",
+              },
+              {
+                text: customer.phone || "—",
+                style: "detail",
+              },
+            ],
+          },
+          {
+            width: "*",
+            stack: [
+              {
+                text: "SHIP TO",
+                style: "sectionTitle",
+              },
+              {
+                text: getShippingAddress(shippingAddress) || "—",
+                style: "detail",
+              },
+            ],
+          },
+        ],
+        columnGap: 35,
+        margin: [0, 0, 0, 22],
+      },
 
-    doc.text(order.shippingAddress.postalCode, 115, 91)
+      // Payment Information
+      {
+        table: {
+          widths: ["*", "*", "*"],
+          body: [
+            [
+              {
+                text: "PAYMENT METHOD",
+                style: "paymentHeader",
+              },
+              {
+                text: "PAYMENT STATUS",
+                style: "paymentHeader",
+              },
+              {
+                text: "PAYMENT REFERENCE",
+                style: "paymentHeader",
+              },
+            ],
+            [
+              {
+                text: getPaymentMethodLabel(payment?.paymentMethod),
+                style: "paymentValue",
+              },
+              {
+                text: payment?.status || "Not available",
+                style: "paymentValue",
+              },
+              {
+                text: payment?.paymentReference || "—",
+                style: "paymentValue",
+              },
+            ],
+          ],
+        },
+        layout: {
+          hLineWidth: () => 0,
+          vLineWidth: () => 0,
+          paddingLeft: () => 10,
+          paddingRight: () => 10,
+          paddingTop: () => 8,
+          paddingBottom: () => 8,
+          fillColor: (rowIndex) => (rowIndex === 0 ? "#F1F5F9" : "#F8FAFC"),
+        },
+        margin: [0, 0, 0, 25],
+      },
 
-    // Customer Information Divider
-    doc.setDrawColor(226, 232, 240)
-    doc.line(20, 100, 190, 100)
+      // Products Section
+      {
+        text: "ORDER ITEMS",
+        style: "sectionTitle",
+        margin: [0, 0, 0, 10],
+      },
 
-        // Items Table Header
-    doc.setFont('helvetica', 'bold')
-    doc.setFontSize(10)
-    doc.setTextColor(255, 255, 255)
-    doc.setFillColor(79, 70, 229)
+      {
+        table: {
+          headerRows: 1,
+          keepWithHeaderRows: 1,
+          dontBreakRows: true,
 
-    doc.rect(20, 110, 170, 10, 'F')
+          widths: ["*", 40, 90, 95],
 
-    doc.text('PRODUCT', 24, 116.5)
-    doc.text('QTY', 125, 116.5, { align: 'center' })
-    doc.text('PRICE', 155, 116.5, { align: 'right' })
-    doc.text('TOTAL', 186, 116.5, { align: 'right' })
+          body: [
+            [
+              {
+                text: "PRODUCT",
+                style: "tableHeader",
+              },
+              {
+                text: "QTY",
+                style: "tableHeader",
+                alignment: "center",
+              },
+              {
+                text: "UNIT PRICE",
+                style: "tableHeader",
+                alignment: "right",
+              },
+              {
+                text: "TOTAL",
+                style: "tableHeader",
+                alignment: "right",
+              },
+            ],
 
-    // Items Table Rows
-    let y = 130
+            ...productRows,
+          ],
+        },
 
-    order.items.forEach((item) => {
-        doc.setFont('helvetica', 'normal')
-        doc.setFontSize(10)
-        doc.setTextColor(71, 85, 105)
+        layout: {
+          hLineWidth: (i) => (i === 1 ? 1 : 0.5),
+          hLineColor: () => "#E2E8F0",
+          vLineWidth: () => 0,
+          paddingLeft: () => 8,
+          paddingRight: () => 8,
+          paddingTop: () => 10,
+          paddingBottom: () => 10,
+        },
+      },
 
-        doc.text(item.name, 24, y)
-        doc.text(String(item.quantity), 125, y, { align: 'center' })
-        doc.text(formatPrice(item.price), 155, y, { align: 'right' })
-        doc.text(
-            formatPrice(item.price * item.quantity),
-            186,
-            y,
-            { align: 'right' },
-        )
+      // Financial Summary
+      {
+        columns: [
+          {
+            width: "*",
+            text: "",
+          },
+          {
+            width: 220,
+            table: {
+              widths: ["*", 95],
+              body: [
+                [
+                  {
+                    text: "Subtotal",
+                    style: "summaryLabel",
+                  },
+                  {
+                    text: formatPrice(subtotal),
+                    style: "summaryValue",
+                    alignment: "right",
+                  },
+                ],
+                [
+                  {
+                    text: "Shipping Fee",
+                    style: "summaryLabel",
+                  },
+                  {
+                    text: formatPrice(shippingFee),
+                    style: "summaryValue",
+                    alignment: "right",
+                  },
+                ],
+                [
+                  {
+                    text: "GRAND TOTAL",
+                    style: "grandTotalLabel",
+                  },
+                  {
+                    text: formatPrice(total),
+                    style: "grandTotalValue",
+                    alignment: "right",
+                  },
+                ],
+              ],
+            },
+            layout: {
+              hLineWidth: (i) => (i === 2 ? 1 : 0),
+              hLineColor: () => "#CBD5E1",
+              vLineWidth: () => 0,
+              paddingLeft: () => 8,
+              paddingRight: () => 8,
+              paddingTop: () => 10,
+              paddingBottom: () => 10,
+              fillColor: (rowIndex) => (rowIndex === 2 ? "#EEF2FF" : null),
+            },
+          },
+        ],
+        margin: [0, 20, 0, 30],
+      },
 
-        doc.setDrawColor(226, 232, 240)
-        doc.line(20, y + 5, 190, y + 5)
+      // Thank You Message
+      {
+        canvas: [
+          {
+            type: "line",
+            x1: 0,
+            y1: 0,
+            x2: 515,
+            y2: 0,
+            lineWidth: 1,
+            lineColor: "#E2E8F0",
+          },
+        ],
+        margin: [0, 0, 0, 15],
+      },
 
-        y += 12
-    })
+      {
+        text: "Thank you for shopping with Marketplace!",
+        style: "thankYou",
+        alignment: "center",
+      },
 
-        // Invoice Totals
-    y += 10
+      {
+        text: "We appreciate your business.",
+        style: "footerMessage",
+        alignment: "center",
+        margin: [0, 5, 0, 0],
+      },
+    ],
 
-    doc.setFont('helvetica', 'normal')
-    doc.setFontSize(10)
-    doc.setTextColor(100, 116, 139)
+    // Page Footer
+    footer: (currentPage, pageCount) => ({
+      columns: [
+        {
+          text: "MARKETPLACE  |  Electronically Generated Invoice",
+          alignment: "left",
+        },
+        {
+          text: `Page ${currentPage} of ${pageCount}`,
+          alignment: "right",
+        },
+      ],
+      margin: [40, 15, 40, 0],
+      fontSize: 8,
+      color: "#94A3B8",
+    }),
 
-    doc.text('Subtotal:', 145, y, { align: 'right' })
-    doc.text(formatPrice(order.subtotal), 186, y, { align: 'right' })
+    // Document Styles
+    styles: {
+      brand: {
+        fontSize: 21,
+        bold: true,
+        color: "#4F46E5",
+        characterSpacing: 0.5,
+      },
 
-    y += 8
+      brandSubtitle: {
+        fontSize: 8,
+        color: "#64748B",
+        margin: [0, 4, 0, 0],
+      },
 
-    doc.text('Shipping Fee:', 145, y, { align: 'right' })
-    doc.text(formatPrice(order.shippingFee), 186, y, { align: 'right' })
+      invoiceTitle: {
+        fontSize: 25,
+        bold: true,
+        color: "#1E293B",
+      },
 
-    y += 10
+      invoiceSubtitle: {
+        fontSize: 7,
+        bold: true,
+        color: "#64748B",
+        margin: [0, 4, 0, 0],
+      },
 
-    doc.setDrawColor(226, 232, 240)
-    doc.line(125, y - 5, 190, y - 5)
+      sectionLabel: {
+        fontSize: 7,
+        bold: true,
+        color: "#94A3B8",
+        characterSpacing: 0.5,
+        margin: [0, 0, 0, 5],
+      },
 
-    doc.setFont('helvetica', 'bold')
-    doc.setFontSize(12)
-    doc.setTextColor(30, 41, 59)
+      orderValue: {
+        fontSize: 9,
+        bold: true,
+        color: "#1E293B",
+      },
 
-    doc.text('TOTAL:', 145, y + 3, { align: 'right' })
-    doc.text(formatPrice(order.total), 186, y + 3, { align: 'right' })
+      sectionTitle: {
+        fontSize: 10,
+        bold: true,
+        color: "#4F46E5",
+        characterSpacing: 0.5,
+      },
 
-        // Invoice Footer
-    y += 25
+      detailBold: {
+        fontSize: 9,
+        bold: true,
+        color: "#1E293B",
+        margin: [0, 3, 0, 3],
+      },
 
-    doc.setFont('helvetica', 'normal')
-    doc.setFontSize(9)
-    doc.setTextColor(100, 116, 139)
+      detail: {
+        fontSize: 9,
+        color: "#475569",
+        margin: [0, 3, 0, 3],
+      },
 
-    doc.text(
-        'Thank you for shopping with us!',
-        105,
-        y,
-        { align: 'center' },
-    )
+      paymentHeader: {
+        fontSize: 7,
+        bold: true,
+        color: "#64748B",
+      },
 
-    doc.text(
-        'This invoice was generated electronically.',
-        105,
-        y + 6,
-        { align: 'center' },
-    )
+      paymentValue: {
+        fontSize: 8,
+        bold: true,
+        color: "#1E293B",
+      },
 
-    // Open PDF in a new browser tab
-    return doc.output('bloburl')
-}
+      tableHeader: {
+        fontSize: 8,
+        bold: true,
+        color: "#FFFFFF",
+        fillColor: "#4F46E5",
+        margin: [0, 3, 0, 3],
+      },
+
+      tableCell: {
+        fontSize: 8,
+        color: "#475569",
+      },
+
+      tableCellBold: {
+        fontSize: 8,
+        bold: true,
+        color: "#1E293B",
+      },
+
+      summaryLabel: {
+        fontSize: 9,
+        color: "#64748B",
+      },
+
+      summaryValue: {
+        fontSize: 9,
+        color: "#334155",
+      },
+
+      grandTotalLabel: {
+        fontSize: 10,
+        bold: true,
+        color: "#312E81",
+      },
+
+      grandTotalValue: {
+        fontSize: 12,
+        bold: true,
+        color: "#4F46E5",
+      },
+
+      thankYou: {
+        fontSize: 11,
+        bold: true,
+        color: "#1E293B",
+      },
+
+      footerMessage: {
+        fontSize: 8,
+        color: "#94A3B8",
+      },
+    },
+  };
+
+  // Open the generated invoice in a new browser tab
+  pdfMake.createPdf(documentDefinition).open();
+};
