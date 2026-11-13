@@ -4,7 +4,13 @@ import pool from "../config/database.js";
 const protect = async (req, res, next) => {
   try {
     // 1. Get JWT from HTTP-only cookie
-    const token = req.cookies?.token;
+    const authHeader = req.headers.authorization;
+
+    const bearerToken = authHeader?.startsWith("Bearer ")
+      ? authHeader.split(" ")[1]
+      : null;
+
+    const token = req.cookies?.token || bearerToken;
 
     // 2. Check if token exists
     if (!token) {

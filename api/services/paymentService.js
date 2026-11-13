@@ -410,22 +410,67 @@ const refundPayment = async ({ paymentId }) => {
       [order.id],
     );
 
-    // 10. Restore stock for each order item
+    // 10. Restore stock and record stock movements
     for (const item of orderItemsResult.rows) {
-      // Skip productss that have already deleted
+      // Skip products that have already been deleted
       if (!item.product_id) {
         continue;
       }
 
+      // Lock the product and retrieve its current stock
+      const productResult = await client.query(
+        `
+      SELECT id, stock_quantity
+      FROM products
+      WHERE id = $1
+      FOR UPDATE
+    `,
+        [item.product_id],
+      );
+
+      const product = productResult.rows[0];
+
+      // Skip products that no longer exist
+      if (!product) {
+        continue;
+      }
+
+      const previousStock = product.stock_quantity;
+      const newStock = previousStock + item.quantity;
+
+      // Restore product stock
       await client.query(
         `
-               UPDATE products
-               SET
-                    stock_quantity = stock_quantity + $1,
-                    updated_at = NOW()
-               WHERE id = $2
-                `,
-        [item.quantity, item.product_id],
+      UPDATE products
+      SET
+        stock_quantity = $1,
+        updated_at = NOW()
+      WHERE id = $2
+    `,
+        [newStock, item.product_id],
+      );
+
+      // Record the inventory movement
+      await client.query(
+        `
+    INSERT INTO inventory_movements (
+      product_id,
+      movement_type,
+      quantity_change,
+      previous_stock,
+      new_stock,
+      reason
+    )
+    VALUES ($1, $2, $3, $4, $5, $6)
+  `,
+        [
+          item.product_id,
+          "stock_in",
+          item.quantity,
+          previousStock,
+          newStock,
+          "Payment refund - inventory restoration",
+        ],
       );
     }
 
@@ -468,4 +513,55 @@ const refundPayment = async ({ paymentId }) => {
   }
 };
 
-export { createPayment, updatePaymentStatus, refundPayment };
+const getOrderPaymentHistory = async (orderId) => {
+  const isValidUUID =
+    typeof orderId === "string" &&
+    /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i.test(
+      orderId,
+    );
+
+  if (!isValidUUID) {
+    throw new Error("Invalid order ID");
+  }
+
+  const orderResult = await pool.query(
+    `
+      SELECT id
+      FROM orders
+      WHERE id = $1
+    `,
+    [orderId],
+  );
+
+  if (!orderResult.rows[0]) {
+    throw new Error("Order not found");
+  }
+
+  const paymentResult = await pool.query(
+    `
+      SELECT
+        id,
+        order_id,
+        payment_method,
+        payment_reference,
+        amount,
+        status,
+        paid_at,
+        created_at,
+        updated_at
+      FROM payments
+      WHERE order_id = $1
+      ORDER BY created_at DESC
+    `,
+    [orderId],
+  );
+
+  return paymentResult.rows;
+};
+
+export {
+  createPayment,
+  updatePaymentStatus,
+  refundPayment,
+  getOrderPaymentHistory,
+};

@@ -6,6 +6,11 @@ import {
   updateOrderStatus,
 } from "../../services/orderService";
 
+import {
+  refundPayment,
+  getOrderPaymentHistory,
+} from "../../services/paymentService";
+
 import Pagination from "../../components/ui/Pagination";
 import SearchInput from "../../components/ui/SearchInput";
 import Button from "../../components/ui/Button";
@@ -89,6 +94,15 @@ const OrdersPage = () => {
   const [refreshKey, setRefreshKey] = useState(0);
   const [pendingStatus, setPendingStatus] = useState("");
 
+  // Refund state
+  const [isRefunding, setIsRefunding] = useState(false);
+  const [pendingRefund, setPendingRefund] = useState(false);
+
+  // Payment history
+  const [paymentHistory, setPaymentHistory] = useState([]);
+  const [isLoadingPaymentHistory, setIsLoadingPaymentHistory] = useState(false);
+  const [paymentHistoryError, setPaymentHistoryError] = useState(null);
+
   const handleStatusUpdate = async (newStatus) => {
     if (!selectedOrder || isUpdating) return;
 
@@ -116,6 +130,51 @@ const OrdersPage = () => {
       toast.error(error.message || "Failed to update order status.");
     } finally {
       setIsUpdating(false);
+    }
+  };
+
+  const refundablePayment = paymentHistory.find(
+    (payment) => payment.status === "paid",
+  );
+
+  const handleRefund = async () => {
+    if (!refundablePayment || isRefunding) return;
+
+    try {
+      setIsRefunding(true);
+
+      await refundPayment(refundablePayment.id);
+
+      setPaymentHistory((current) =>
+        current.map((payment) =>
+          payment.id === refundablePayment.id
+            ? { ...payment, status: "refunded" }
+            : payment.status === "pending"
+              ? { ...payment, status: "cancelled" }
+              : payment,
+        ),
+      );
+
+      setSelectedOrder((current) =>
+        current
+          ? {
+              ...current,
+              status: "cancelled",
+              payment_status: "refunded",
+              payment: current.payment
+                ? { ...current.payment, status: "refunded" }
+                : null,
+            }
+          : current,
+      );
+
+      toast.success("Payment refunded successfully.");
+      setPendingRefund(false);
+      setRefreshKey((current) => current + 1);
+    } catch (error) {
+      toast.error(error.message || "Failed to refund payment.");
+    } finally {
+      setIsRefunding(false);
     }
   };
 
@@ -163,6 +222,32 @@ const OrdersPage = () => {
 
     fetchOrders();
   }, [currentPage, pageSize, selectedStatus, debouncedSearch, refreshKey]);
+
+  useEffect(() => {
+    const fetchPaymentHistory = async () => {
+      if (!selectedOrder?.id) {
+        setPaymentHistory([]);
+        return;
+      }
+
+      try {
+        setIsLoadingPaymentHistory(true);
+        setPaymentHistoryError("");
+
+        const payment = await getOrderPaymentHistory(selectedOrder.id);
+        setPaymentHistory(payment);
+      } catch (error) {
+        setPaymentHistoryError(
+          error.message || "Failed to load payment history",
+        );
+        setPaymentHistory([]);
+      } finally {
+        setIsLoadingPaymentHistory(false);
+      }
+    };
+
+    fetchPaymentHistory();
+  }, [selectedOrder?.id, refreshKey]);
 
   const statisticCards = [
     {
@@ -601,16 +686,15 @@ const OrdersPage = () => {
               <section>
                 <div className="mb-3 flex items-center gap-2">
                   <PhilippinePeso size={18} className="text-slate-400" />
-
                   <h3 className="font-semibold text-slate-900">
                     Payment Summary
                   </h3>
                 </div>
 
-                <div className="space-y-3 rounded-xl border border-slate-200 p-5 text-sm">
+                <div className="space-y-4 rounded-xl border border-slate-200 p-5 text-sm">
+                  {/* Order totals */}
                   <div className="flex justify-between gap-4">
                     <span className="text-slate-500">Subtotal</span>
-
                     <span className="font-medium text-slate-900">
                       {formatCurrency(selectedOrder.subtotal)}
                     </span>
@@ -618,7 +702,6 @@ const OrdersPage = () => {
 
                   <div className="flex justify-between gap-4">
                     <span className="text-slate-500">Shipping Fee</span>
-
                     <span className="font-medium text-slate-900">
                       {formatCurrency(selectedOrder.shipping_fee)}
                     </span>
@@ -626,10 +709,114 @@ const OrdersPage = () => {
 
                   <div className="flex justify-between gap-4 border-t border-slate-200 pt-4">
                     <span className="font-semibold text-slate-900">Total</span>
-
                     <span className="text-lg font-bold text-slate-900">
                       {formatCurrency(selectedOrder.total)}
                     </span>
+                  </div>
+
+                  {/* Payment History */}
+                  <div className="border-t border-slate-200 pt-4">
+                    <h4 className="mb-3 font-semibold text-slate-900">
+                      Payment History
+                    </h4>
+
+                    {isLoadingPaymentHistory ? (
+                      <p className="text-slate-500">
+                        Loading payment history...
+                      </p>
+                    ) : paymentHistoryError ? (
+                      <p className="text-red-600">{paymentHistoryError}</p>
+                    ) : paymentHistory.length === 0 ? (
+                      <p className="text-slate-500">
+                        No payment attempts recorded for this order.
+                      </p>
+                    ) : (
+                      <div className="space-y-4">
+                        {paymentHistory.map((payment, index) => (
+                          <div
+                            key={payment.id}
+                            className="rounded-lg border border-slate-200 p-4"
+                          >
+                            <div className="mb-3 flex flex-wrap items-center justify-between gap-2">
+                              <span className="font-semibold text-slate-900">
+                                Attempt #{paymentHistory.length - index}
+                              </span>
+
+                              <span
+                                className={`inline-flex rounded-full px-2.5 py-1 text-xs font-medium capitalize ring-1 ring-inset ${getPaymentStatusStyle(payment.status)}`}
+                              >
+                                {formatStatus(payment.status)}
+                              </span>
+                            </div>
+
+                            <div className="space-y-2">
+                              <div className="flex justify-between gap-4">
+                                <span className="text-slate-500">Method</span>
+                                <span className="font-medium capitalize text-slate-900">
+                                  {formatStatus(payment.payment_method)}
+                                </span>
+                              </div>
+
+                              <div className="flex justify-between gap-4">
+                                <span className="text-slate-500">
+                                  Reference
+                                </span>
+                                <span className="break-all text-right font-medium text-slate-900">
+                                  {payment.payment_reference || "N/A"}
+                                </span>
+                              </div>
+
+                              <div className="flex justify-between gap-4">
+                                <span className="text-slate-500">Amount</span>
+                                <span className="font-medium text-slate-900">
+                                  {formatCurrency(payment.amount)}
+                                </span>
+                              </div>
+
+                              <div className="flex justify-between gap-4">
+                                <span className="text-slate-500">Created</span>
+                                <span className="text-right font-medium text-slate-900">
+                                  {new Date(payment.created_at).toLocaleString(
+                                    "en-PH",
+                                  )}
+                                </span>
+                              </div>
+
+                              {payment.paid_at && (
+                                <div className="flex justify-between gap-4">
+                                  <span className="text-slate-500">
+                                    Paid Date
+                                  </span>
+                                  <span className="text-right font-medium text-slate-900">
+                                    {new Date(payment.paid_at).toLocaleString(
+                                      "en-PH",
+                                    )}
+                                  </span>
+                                </div>
+                              )}
+                            </div>
+                          </div>
+                        ))}
+                      </div>
+                    )}
+
+                    {selectedOrder.payment_status === "paid" &&
+                      ["pending", "processing"].includes(
+                        selectedOrder.status,
+                      ) &&
+                      refundablePayment && (
+                        <div className="flex justify-end border-t border-slate-200 pt-4">
+                          <Button
+                            variant="destructive"
+                            disabled={isRefunding}
+                            onClick={() => setPendingRefund(true)}
+                          >
+                            {isRefunding
+                              ? "Processing Refund..."
+                              : "Refund Payment"}
+                          </Button>
+                        </div>
+                      )}
                   </div>
                 </div>
               </section>
@@ -782,6 +969,48 @@ const OrdersPage = () => {
                     className="rounded-lg bg-orange-600 px-4 py-2 text-sm font-medium text-white hover:bg-orange-700 disabled:cursor-not-allowed disabled:opacity-50"
                   >
                     {isUpdating ? "Processing..." : "Confirm Change"}
+                  </button>
+                </div>
+              </div>
+            </div>
+          )}
+
+          {pendingRefund && (
+            <div className="fixed inset-0 z-60 flex items-center justify-center bg-black/50 p-4">
+              <div
+                className="w-full max-w-md rounded-xl bg-white p-6 shadow-xl"
+                onClick={(event) => event.stopPropagation()}
+              >
+                <h3 className="text-lg font-semibold text-slate-900">
+                  Confirm Payment Refund
+                </h3>
+
+                <p className="mt-3 text-sm text-slate-600">
+                  Are you sure you want to refund this payment?
+                </p>
+
+                <div className="mt-4 rounded-lg bg-amber-50 p-3 text-sm text-amber-700">
+                  This action will refund the payment, cancel the order, and
+                  restore the reserved inventory.
+                </div>
+
+                <div className="mt-6 flex justify-end gap-3">
+                  <button
+                    type="button"
+                    disabled={isRefunding}
+                    onClick={() => setPendingRefund(false)}
+                    className="rounded-lg border border-slate-300 px-4 py-2 text-sm font-medium text-slate-700 hover:bg-slate-50 disabled:opacity-50"
+                  >
+                    Go Back
+                  </button>
+
+                  <button
+                    type="button"
+                    disabled={isRefunding}
+                    onClick={handleRefund}
+                    className="rounded-lg bg-rose-600 px-4 py-2 text-sm font-medium text-white hover:bg-rose-700 disabled:cursor-not-allowed disabled:opacity-50"
+                  >
+                    {isRefunding ? "Processing..." : "Confirm Refund"}
                   </button>
                 </div>
               </div>

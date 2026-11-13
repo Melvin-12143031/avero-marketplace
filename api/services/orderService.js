@@ -319,17 +319,43 @@ const getAllOrdersForAdmin = async ({
   // 2. Get pagination orders
   const ordersResult = await pool.query(
     `
-    SELECT *
-    FROM orders
+    SELECT
+      o.*,
+      p.id AS payment_id,
+      p.payment_method,
+      p.payment_reference,
+      p.amount AS payment_amount,
+      p.status AS latest_payment_status,
+      p.paid_at,
+      p.created_at AS payment_created_at
+
+    FROM orders o
+
+    LEFT JOIN LATERAL (
+      SELECT
+        id,
+        payment_method,
+        payment_reference,
+        amount,
+        status,
+        paid_at,
+        created_at
+      FROM payments
+      WHERE order_id = o.id
+      ORDER BY created_at DESC
+      LIMIT 1
+    ) p ON TRUE
+
     WHERE
-      ($1::text IS NULL OR status = $1)
+      ($1::text IS NULL OR o.status = $1)
       AND (
         $2::text = ''
-        OR order_number ILIKE '%' || $2 || '%'
-        OR shipping_address::jsonb -> 'customer' ->> 'fullName' ILIKE '%' || $2 || '%'
-        OR shipping_address::jsonb -> 'customer' ->> 'email' ILIKE '%' || $2 || '%'
+        OR o.order_number ILIKE '%' || $2 || '%'
+        OR o.shipping_address::jsonb -> 'customer' ->> 'fullName' ILIKE '%' || $2 || '%'
+        OR o.shipping_address::jsonb -> 'customer' ->> 'email' ILIKE '%' || $2 || '%'
       )
-    ORDER BY created_at DESC
+
+    ORDER BY o.created_at DESC
     LIMIT $3 OFFSET $4
   `,
     [status, search, limit, offset],
@@ -370,6 +396,19 @@ const getAllOrdersForAdmin = async ({
   const formattedOrders = orders.map((order) => ({
     ...order,
     shipping_address: JSON.parse(order.shipping_address),
+
+    payment: order.payment_id
+      ? {
+          id: order.payment_id,
+          payment_method: order.payment_method,
+          payment_reference: order.payment_reference,
+          amount: order.payment_amount,
+          status: order.latest_payment_status,
+          paid_at: order.paid_at,
+          created_at: order.payment_created_at,
+        }
+      : null,
+
     items: itemsResult.rows.filter((item) => item.order_id === order.id),
   }));
 
