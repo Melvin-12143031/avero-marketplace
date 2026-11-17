@@ -1,5 +1,11 @@
 import { NavLink, Outlet } from "react-router-dom";
-import { LayoutDashboard, Package, Boxes, ShoppingBag } from "lucide-react";
+import {
+  LayoutDashboard,
+  Package,
+  Boxes,
+  ShoppingBag,
+  Users,
+} from "lucide-react";
 
 const AdminLayout = () => {
   const navigation = [
@@ -23,6 +29,12 @@ const AdminLayout = () => {
       name: "Orders",
       path: "/admin/orders",
       icon: ShoppingBag,
+    },
+
+    {
+      name: "Customers",
+      path: "/admin/customers",
+      icon: Users,
     },
   ];
 

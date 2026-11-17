@@ -1,10 +1,12 @@
-import { Pool }  from 'pg'
+import { Pool } from "pg";
 
 const pool = new Pool({
   connectionString: process.env.DATABASE_URL,
-  ssl: {
-    rejectUnauthorized: false,  
-  },
+  connectionTimeoutMillis: 5000,
 });
 
-export default pool
+pool.on("error", (error) => {
+  console.error("Unexpected PostgreSQL pool error:", error.message);
+});
+
+export default pool;

@@ -3,7 +3,7 @@ import pool from "../config/database.js";
 
 const protect = async (req, res, next) => {
   try {
-    // 1. Get JWT from HTTP-only cookie
+    // 1. Get JWT from HTTP-only cookie or Authorization header
     const authHeader = req.headers.authorization;
 
     const bearerToken = authHeader?.startsWith("Bearer ")
@@ -21,12 +21,19 @@ const protect = async (req, res, next) => {
     }
 
     // 3. Verify token
-    const decoded = jwt.verify(token, process.env.JWT_SECRET);
+    const decoded = jwt.verify(token, process.env.JWT_SECRET, {
+      algorithms: ["HS256"],
+    });
 
     // 4. Retrieve current user from database
     const result = await pool.query(
       `
-        SELECT id, full_name, email, role
+        SELECT
+          id,
+          full_name,
+          email,
+          role,
+          is_active
         FROM users
         WHERE id = $1
       `,
@@ -41,8 +48,18 @@ const protect = async (req, res, next) => {
       });
     }
 
-    // 6. Attach user information to request
-    req.user = result.rows[0];
+    const user = result.rows[0];
+
+    // 6. Check account status
+    if (!user.is_active) {
+      return res.status(403).json({
+        status: "error",
+        message: "Your account has been deactivated.",
+      });
+    }
+
+    // 7. Attach user information to request
+    req.user = user;
 
     next();
   } catch (error) {
@@ -56,3 +73,4 @@ const protect = async (req, res, next) => {
 };
 
 export default protect;
+//

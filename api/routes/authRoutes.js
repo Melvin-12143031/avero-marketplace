@@ -1,4 +1,5 @@
 import express from "express";
+import authLimiter from "../middleware/rateLimitMiddleware.js";
 import {
   registerController,
   loginController,
@@ -10,10 +11,10 @@ import protect from "../middleware/authMiddleware.js";
 const router = express.Router();
 
 // Register a new account
-router.post("/register", registerController);
+router.post("/register", authLimiter, registerController);
 
 // Login to an existing account
-router.post("/login", loginController);
+router.post("/login", authLimiter, loginController);
 
 // Restore the authenticated user's session
 router.get("/me", protect, (req, res) => {

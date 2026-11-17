@@ -5,6 +5,7 @@ import {
   updateOrderStatus,
   getAllOrdersForAdmin,
   getOrderStatistics,
+  getAdminOrderById,
 } from "../services/orderService.js";
 
 const createOrderController = async (req, res) => {
@@ -115,6 +116,47 @@ const getOrderByIdController = async (req, res) => {
     });
   } catch (error) {
     console.error("Error retrieving order:", error.message);
+
+    res.status(500).json({
+      status: "error",
+      message: "Failed to retrieve order.",
+    });
+  }
+};
+
+const getAdminOrderByIdController = async (req, res) => {
+  try {
+    const { id } = req.params;
+
+    const isValidUUID =
+      /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i.test(
+        id,
+      );
+
+    if (!isValidUUID) {
+      return res.status(400).json({
+        status: "error",
+        message: "Invalid order ID.",
+      });
+    }
+
+    const order = await getAdminOrderById(id);
+
+    if (!order) {
+      return res.status(404).json({
+        status: "error",
+        message: "Order not found.",
+      });
+    }
+
+    res.status(200).json({
+      status: "success",
+      data: {
+        order,
+      },
+    });
+  } catch (error) {
+    console.error("Admin order retrieval error:", error.message);
 
     res.status(500).json({
       status: "error",
@@ -271,4 +313,5 @@ export {
   updateOrderStatusController,
   getAllOrdersForAdminController,
   getOrderStatisticsController,
+  getAdminOrderByIdController,
 };

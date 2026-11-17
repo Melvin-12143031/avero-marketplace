@@ -1,19 +1,15 @@
 import { useEffect, useState } from "react";
 import { toast } from "sonner";
+
 import {
   getAdminOrders,
   getOrderStatistics,
-  updateOrderStatus,
 } from "../../services/orderService";
-
-import {
-  refundPayment,
-  getOrderPaymentHistory,
-} from "../../services/paymentService";
 
 import Pagination from "../../components/ui/Pagination";
 import SearchInput from "../../components/ui/SearchInput";
 import Button from "../../components/ui/Button";
+import OrderDetailsModal from "@/components/admin/orders/OrderDetailsModal";
 
 import {
   ShoppingBag,
@@ -22,10 +18,6 @@ import {
   PhilippinePeso,
   Eye,
   RefreshCw,
-  X,
-  MapPin,
-  CalendarDays,
-  Package,
 } from "lucide-react";
 
 const formatCurrency = (amount) =>
@@ -60,14 +52,6 @@ const getPaymentStatusStyle = (status) => {
   return styles[status] || "bg-slate-100 text-slate-700 ring-slate-600/20";
 };
 
-const ORDER_STATUS_TRANSITIONS = {
-  pending: ["processing", "cancelled"],
-  processing: ["shipped", "cancelled"],
-  shipped: ["delivered"],
-  delivered: [],
-  cancelled: [],
-};
-
 const OrdersPage = () => {
   // Orders pagination
   const [currentPage, setCurrentPage] = useState(1);
@@ -88,95 +72,10 @@ const OrdersPage = () => {
 
   // Order details modal
   const [selectedOrder, setSelectedOrder] = useState(null);
+  const [isDetailsOpen, setIsDetailsOpen] = useState(false);
 
-  // Status update state
-  const [isUpdating, setIsUpdating] = useState(false);
+  // Refresh state
   const [refreshKey, setRefreshKey] = useState(0);
-  const [pendingStatus, setPendingStatus] = useState("");
-
-  // Refund state
-  const [isRefunding, setIsRefunding] = useState(false);
-  const [pendingRefund, setPendingRefund] = useState(false);
-
-  // Payment history
-  const [paymentHistory, setPaymentHistory] = useState([]);
-  const [isLoadingPaymentHistory, setIsLoadingPaymentHistory] = useState(false);
-  const [paymentHistoryError, setPaymentHistoryError] = useState(null);
-
-  const handleStatusUpdate = async (newStatus) => {
-    if (!selectedOrder || isUpdating) return;
-
-    const allowedStatuses =
-      ORDER_STATUS_TRANSITIONS[selectedOrder.status] ?? [];
-
-    if (!allowedStatuses.includes(newStatus)) {
-      toast.error("This status transition is not allowed.");
-      return;
-    }
-
-    try {
-      setIsUpdating(true);
-
-      const updatedOrder = await updateOrderStatus(selectedOrder.id, newStatus);
-
-      setSelectedOrder((current) =>
-        current ? { ...current, ...updatedOrder } : current,
-      );
-
-      toast.success("Order status updated successfully.");
-
-      setRefreshKey((current) => current + 1);
-    } catch (error) {
-      toast.error(error.message || "Failed to update order status.");
-    } finally {
-      setIsUpdating(false);
-    }
-  };
-
-  const refundablePayment = paymentHistory.find(
-    (payment) => payment.status === "paid",
-  );
-
-  const handleRefund = async () => {
-    if (!refundablePayment || isRefunding) return;
-
-    try {
-      setIsRefunding(true);
-
-      await refundPayment(refundablePayment.id);
-
-      setPaymentHistory((current) =>
-        current.map((payment) =>
-          payment.id === refundablePayment.id
-            ? { ...payment, status: "refunded" }
-            : payment.status === "pending"
-              ? { ...payment, status: "cancelled" }
-              : payment,
-        ),
-      );
-
-      setSelectedOrder((current) =>
-        current
-          ? {
-              ...current,
-              status: "cancelled",
-              payment_status: "refunded",
-              payment: current.payment
-                ? { ...current.payment, status: "refunded" }
-                : null,
-            }
-          : current,
-      );
-
-      toast.success("Payment refunded successfully.");
-      setPendingRefund(false);
-      setRefreshKey((current) => current + 1);
-    } catch (error) {
-      toast.error(error.message || "Failed to refund payment.");
-    } finally {
-      setIsRefunding(false);
-    }
-  };
 
   // Debounce search input
   useEffect(() => {
@@ -222,32 +121,6 @@ const OrdersPage = () => {
 
     fetchOrders();
   }, [currentPage, pageSize, selectedStatus, debouncedSearch, refreshKey]);
-
-  useEffect(() => {
-    const fetchPaymentHistory = async () => {
-      if (!selectedOrder?.id) {
-        setPaymentHistory([]);
-        return;
-      }
-
-      try {
-        setIsLoadingPaymentHistory(true);
-        setPaymentHistoryError("");
-
-        const payment = await getOrderPaymentHistory(selectedOrder.id);
-        setPaymentHistory(payment);
-      } catch (error) {
-        setPaymentHistoryError(
-          error.message || "Failed to load payment history",
-        );
-        setPaymentHistory([]);
-      } finally {
-        setIsLoadingPaymentHistory(false);
-      }
-    };
-
-    fetchPaymentHistory();
-  }, [selectedOrder?.id, refreshKey]);
 
   const statisticCards = [
     {
@@ -494,7 +367,10 @@ const OrdersPage = () => {
                     <td className="px-5 py-4 text-right">
                       <Button
                         variant="secondary"
-                        onClick={() => setSelectedOrder(order)}
+                        onClick={() => {
+                          setSelectedOrder(order);
+                          setIsDetailsOpen(true);
+                        }}
                         tooltip="View Details"
                         className="border-0 bg-transparent px-2 py-2 text-slate-600 shadow-none hover:bg-slate-100 hover:text-indigo-600 cursor-pointer"
                       >
@@ -520,504 +396,19 @@ const OrdersPage = () => {
         </div>
       </div>
 
-      {/* Order Details Modal */}
-      {selectedOrder && (
-        <div
-          className="fixed inset-0 z-50 flex items-center justify-center bg-slate-950/50 p-4 backdrop-blur-sm"
-          onClick={() => setSelectedOrder(null)}
-        >
-          <div
-            role="dialog"
-            aria-modal="true"
-            aria-labelledby="order-modal-title"
-            className="max-h-[90vh] w-full max-w-3xl overflow-y-auto rounded-2xl bg-white shadow-2xl"
-            onClick={(event) => event.stopPropagation()}
-          >
-            {/* Modal Header */}
-            <div className="sticky top-0 z-10 flex items-center justify-between border-b border-slate-200 bg-white px-6 py-5">
-              <div>
-                <h2
-                  id="order-modal-title"
-                  className="text-xl font-bold text-slate-900"
-                >
-                  Order Details
-                </h2>
+      {/* Extracted Order Details Modal */}
+      <OrderDetailsModal
+        orderId={selectedOrder?.id}
+        open={isDetailsOpen}
+        onOpenChange={(open) => {
+          setIsDetailsOpen(open);
 
-                <p className="mt-1 text-sm text-slate-500">
-                  {selectedOrder.order_number}
-                </p>
-              </div>
-
-              <button
-                onClick={() => setSelectedOrder(null)}
-                title="Close"
-                aria-label="Close order details"
-                className="rounded-lg p-2 text-slate-400 transition hover:bg-slate-100 hover:text-slate-900"
-              >
-                <X size={21} />
-              </button>
-            </div>
-
-            <div className="space-y-7 p-6">
-              {/* Order Summary */}
-              <section>
-                <div className="mb-3 flex items-center gap-2">
-                  <CalendarDays size={18} className="text-slate-400" />
-
-                  <h3 className="font-semibold text-slate-900">
-                    Order Summary
-                  </h3>
-                </div>
-
-                <div className="grid grid-cols-1 gap-5 rounded-xl border border-slate-200 bg-slate-50 p-5 sm:grid-cols-2">
-                  <div>
-                    <p className="text-xs font-medium uppercase tracking-wide text-slate-400">
-                      Order Date
-                    </p>
-
-                    <p className="mt-1 text-sm font-medium text-slate-900">
-                      {new Date(selectedOrder.created_at).toLocaleString(
-                        "en-PH",
-                      )}
-                    </p>
-                  </div>
-
-                  <div>
-                    <p className="text-xs font-medium uppercase tracking-wide text-slate-400">
-                      Order Status
-                    </p>
-
-                    <span
-                      className={`mt-2 inline-flex rounded-full px-2.5 py-1 text-xs font-medium capitalize ring-1 ring-inset ${getOrderStatusStyle(selectedOrder.status)}`}
-                    >
-                      {formatStatus(selectedOrder.status)}
-                    </span>
-
-                    {(ORDER_STATUS_TRANSITIONS[selectedOrder.status] ?? [])
-                      .length > 0 && (
-                      <div className="mt-3">
-                        <label
-                          htmlFor="order-status-update"
-                          className="mb-1 block text-xs font-medium text-slate-500"
-                        >
-                          Update Status
-                        </label>
-
-                        <select
-                          id="order-status-update"
-                          value=""
-                          disabled={isUpdating}
-                          onChange={(event) => {
-                            const newStatus = event.target.value;
-
-                            if (newStatus) {
-                              setPendingStatus(newStatus);
-                            }
-                          }}
-                          className="w-full rounded-lg border border-slate-300 bg-white px-3 py-2 text-sm text-slate-700 outline-none focus:border-orange-500 focus:ring-2 focus:ring-orange-100 disabled:cursor-not-allowed disabled:opacity-50"
-                        >
-                          <option value="" disabled>
-                            {isUpdating ? "Updating..." : "Choose new status"}
-                          </option>
-
-                          {(
-                            ORDER_STATUS_TRANSITIONS[selectedOrder.status] ?? []
-                          ).map((status) => {
-                            const requiresPayment = [
-                              "processing",
-                              "shipped",
-                              "delivered",
-                            ].includes(status);
-
-                            const isDisabled =
-                              requiresPayment &&
-                              selectedOrder.payment_status !== "paid";
-
-                            return (
-                              <option
-                                key={status}
-                                value={status}
-                                disabled={isDisabled}
-                              >
-                                {formatStatus(status)}
-                                {isDisabled ? " (Payment required)" : ""}
-                              </option>
-                            );
-                          })}
-                        </select>
-
-                        {selectedOrder.payment_status !== "paid" && (
-                          <p className="mt-2 text-xs text-amber-600">
-                            This order must be fully paid before fulfillment can
-                            proceed.
-                          </p>
-                        )}
-                      </div>
-                    )}
-                  </div>
-
-                  <div>
-                    <p className="text-xs font-medium uppercase tracking-wide text-slate-400">
-                      Payment Status
-                    </p>
-
-                    <span
-                      className={`mt-2 inline-flex rounded-full px-2.5 py-1 text-xs font-medium capitalize ring-1 ring-inset ${getPaymentStatusStyle(selectedOrder.payment_status)}`}
-                    >
-                      {formatStatus(selectedOrder.payment_status)}
-                    </span>
-                  </div>
-
-                  <div>
-                    <p className="text-xs font-medium uppercase tracking-wide text-slate-400">
-                      Customer
-                    </p>
-
-                    <p className="mt-1 text-sm font-medium text-slate-900">
-                      {selectedOrder.shipping_address?.customer?.fullName ||
-                        selectedOrder.shipping_address?.fullName ||
-                        "N/A"}
-                    </p>
-                  </div>
-                </div>
-              </section>
-
-              {/* Payment Summary */}
-              <section>
-                <div className="mb-3 flex items-center gap-2">
-                  <PhilippinePeso size={18} className="text-slate-400" />
-                  <h3 className="font-semibold text-slate-900">
-                    Payment Summary
-                  </h3>
-                </div>
-
-                <div className="space-y-4 rounded-xl border border-slate-200 p-5 text-sm">
-                  {/* Order totals */}
-                  <div className="flex justify-between gap-4">
-                    <span className="text-slate-500">Subtotal</span>
-                    <span className="font-medium text-slate-900">
-                      {formatCurrency(selectedOrder.subtotal)}
-                    </span>
-                  </div>
-
-                  <div className="flex justify-between gap-4">
-                    <span className="text-slate-500">Shipping Fee</span>
-                    <span className="font-medium text-slate-900">
-                      {formatCurrency(selectedOrder.shipping_fee)}
-                    </span>
-                  </div>
-
-                  <div className="flex justify-between gap-4 border-t border-slate-200 pt-4">
-                    <span className="font-semibold text-slate-900">Total</span>
-                    <span className="text-lg font-bold text-slate-900">
-                      {formatCurrency(selectedOrder.total)}
-                    </span>
-                  </div>
-
-                  {/* Payment History */}
-                  <div className="border-t border-slate-200 pt-4">
-                    <h4 className="mb-3 font-semibold text-slate-900">
-                      Payment History
-                    </h4>
-
-                    {isLoadingPaymentHistory ? (
-                      <p className="text-slate-500">
-                        Loading payment history...
-                      </p>
-                    ) : paymentHistoryError ? (
-                      <p className="text-red-600">{paymentHistoryError}</p>
-                    ) : paymentHistory.length === 0 ? (
-                      <p className="text-slate-500">
-                        No payment attempts recorded for this order.
-                      </p>
-                    ) : (
-                      <div className="space-y-4">
-                        {paymentHistory.map((payment, index) => (
-                          <div
-                            key={payment.id}
-                            className="rounded-lg border border-slate-200 p-4"
-                          >
-                            <div className="mb-3 flex flex-wrap items-center justify-between gap-2">
-                              <span className="font-semibold text-slate-900">
-                                Attempt #{paymentHistory.length - index}
-                              </span>
-
-                              <span
-                                className={`inline-flex rounded-full px-2.5 py-1 text-xs font-medium capitalize ring-1 ring-inset ${getPaymentStatusStyle(payment.status)}`}
-                              >
-                                {formatStatus(payment.status)}
-                              </span>
-                            </div>
-
-                            <div className="space-y-2">
-                              <div className="flex justify-between gap-4">
-                                <span className="text-slate-500">Method</span>
-                                <span className="font-medium capitalize text-slate-900">
-                                  {formatStatus(payment.payment_method)}
-                                </span>
-                              </div>
-
-                              <div className="flex justify-between gap-4">
-                                <span className="text-slate-500">
-                                  Reference
-                                </span>
-                                <span className="break-all text-right font-medium text-slate-900">
-                                  {payment.payment_reference || "N/A"}
-                                </span>
-                              </div>
-
-                              <div className="flex justify-between gap-4">
-                                <span className="text-slate-500">Amount</span>
-                                <span className="font-medium text-slate-900">
-                                  {formatCurrency(payment.amount)}
-                                </span>
-                              </div>
-
-                              <div className="flex justify-between gap-4">
-                                <span className="text-slate-500">Created</span>
-                                <span className="text-right font-medium text-slate-900">
-                                  {new Date(payment.created_at).toLocaleString(
-                                    "en-PH",
-                                  )}
-                                </span>
-                              </div>
-
-                              {payment.paid_at && (
-                                <div className="flex justify-between gap-4">
-                                  <span className="text-slate-500">
-                                    Paid Date
-                                  </span>
-                                  <span className="text-right font-medium text-slate-900">
-                                    {new Date(payment.paid_at).toLocaleString(
-                                      "en-PH",
-                                    )}
-                                  </span>
-                                </div>
-                              )}
-                            </div>
-                          </div>
-                        ))}
-                      </div>
-                    )}
-
-                    {selectedOrder.payment_status === "paid" &&
-                      ["pending", "processing"].includes(
-                        selectedOrder.status,
-                      ) &&
-                      refundablePayment && (
-                        <div className="flex justify-end border-t border-slate-200 pt-4">
-                          <Button
-                            variant="destructive"
-                            disabled={isRefunding}
-                            onClick={() => setPendingRefund(true)}
-                          >
-                            {isRefunding
-                              ? "Processing Refund..."
-                              : "Refund Payment"}
-                          </Button>
-                        </div>
-                      )}
-                  </div>
-                </div>
-              </section>
-
-              {/* Ordered Products */}
-              <section>
-                <div className="mb-3 flex items-center gap-2">
-                  <Package size={18} className="text-slate-400" />
-
-                  <h3 className="font-semibold text-slate-900">
-                    Ordered Products ({selectedOrder.items?.length ?? 0})
-                  </h3>
-                </div>
-
-                <div className="overflow-x-auto rounded-xl border border-slate-200">
-                  <table className="w-full min-w-[500px] text-left text-sm">
-                    <thead className="bg-slate-50 text-xs font-semibold uppercase tracking-wide text-slate-500">
-                      <tr>
-                        <th className="px-4 py-3">Product</th>
-                        <th className="px-4 py-3 text-center">Qty</th>
-                        <th className="px-4 py-3 text-right">Price</th>
-                        <th className="px-4 py-3 text-right">Subtotal</th>
-                      </tr>
-                    </thead>
-
-                    <tbody className="divide-y divide-slate-100">
-                      {selectedOrder.items?.map((item) => (
-                        <tr key={item.id}>
-                          <td className="px-4 py-3 font-medium text-slate-900">
-                            {item.product_name}
-                          </td>
-
-                          <td className="px-4 py-3 text-center text-slate-600">
-                            {item.quantity}
-                          </td>
-
-                          <td className="whitespace-nowrap px-4 py-3 text-right text-slate-600">
-                            {formatCurrency(item.unit_price)}
-                          </td>
-
-                          <td className="whitespace-nowrap px-4 py-3 text-right font-medium text-slate-900">
-                            {formatCurrency(item.subtotal)}
-                          </td>
-                        </tr>
-                      ))}
-                    </tbody>
-                  </table>
-                </div>
-              </section>
-
-              {/* Shipping Address */}
-              <section>
-                <div className="mb-3 flex items-center gap-2">
-                  <MapPin size={18} className="text-slate-400" />
-
-                  <h3 className="font-semibold text-slate-900">
-                    Shipping Address
-                  </h3>
-                </div>
-
-                <div className="rounded-xl border border-slate-200 p-5">
-                  <p className="font-semibold text-slate-900">
-                    {selectedOrder.shipping_address?.customer?.fullName ||
-                      selectedOrder.shipping_address?.fullName ||
-                      "N/A"}
-                  </p>
-
-                  <p className="mt-2 text-sm text-slate-600">
-                    {selectedOrder.shipping_address?.customer?.phone ||
-                      selectedOrder.shipping_address?.phone}
-                  </p>
-
-                  <p className="mt-1 text-sm text-slate-600">
-                    {selectedOrder.shipping_address?.customer?.email ||
-                      selectedOrder.shipping_address?.email}
-                  </p>
-
-                  <p className="mt-3 text-sm text-slate-600">
-                    {selectedOrder.shipping_address?.shippingAddress?.address ||
-                      selectedOrder.shipping_address?.address}
-                  </p>
-
-                  <p className="mt-1 text-sm text-slate-600">
-                    {[
-                      selectedOrder.shipping_address?.shippingAddress?.city ||
-                        selectedOrder.shipping_address?.city,
-                      selectedOrder.shipping_address?.shippingAddress
-                        ?.province || selectedOrder.shipping_address?.province,
-                      selectedOrder.shipping_address?.shippingAddress
-                        ?.postalCode ||
-                        selectedOrder.shipping_address?.postalCode,
-                    ]
-                      .filter(Boolean)
-                      .join(", ")}
-                  </p>
-                </div>
-              </section>
-            </div>
-
-            {/* Modal Footer */}
-            <div className="flex justify-end border-t border-slate-200 bg-slate-50 px-6 py-4">
-              <button
-                onClick={() => setSelectedOrder(null)}
-                className="rounded-lg bg-slate-900 px-5 py-2.5 text-sm font-medium text-white transition hover:bg-slate-700"
-              >
-                Close
-              </button>
-            </div>
-          </div>
-
-          {/* Confirmation Dialog */}
-          {pendingStatus && (
-            <div className="fixed inset-0 z-[60] flex items-center justify-center bg-black/50 p-4">
-              <div className="w-full max-w-md rounded-xl bg-white p-6 shadow-xl">
-                <h3 className="text-lg font-semibold text-slate-900">
-                  Confirm Order Status Change
-                </h3>
-
-                <p className="mt-3 text-sm text-slate-600">
-                  Are you sure you want to change this order's status from{" "}
-                  <strong>{formatStatus(selectedOrder.status)}</strong> to{" "}
-                  <strong>{formatStatus(pendingStatus)}</strong>?
-                </p>
-
-                {pendingStatus === "cancelled" && (
-                  <p className="mt-3 rounded-lg bg-red-50 p-3 text-sm text-red-700">
-                    Warning: Cancelling this order will restore its reserved
-                    stock. This action should only be performed when
-                    cancellation is intended.
-                  </p>
-                )}
-
-                <div className="mt-6 flex justify-end gap-3">
-                  <button
-                    type="button"
-                    disabled={isUpdating}
-                    onClick={() => setPendingStatus("")}
-                    className="rounded-lg border border-slate-300 px-4 py-2 text-sm font-medium text-slate-700 hover:bg-slate-50 disabled:opacity-50"
-                  >
-                    Go Back
-                  </button>
-
-                  <button
-                    type="button"
-                    disabled={isUpdating}
-                    onClick={async () => {
-                      await handleStatusUpdate(pendingStatus);
-                      setPendingStatus("");
-                    }}
-                    className="rounded-lg bg-orange-600 px-4 py-2 text-sm font-medium text-white hover:bg-orange-700 disabled:cursor-not-allowed disabled:opacity-50"
-                  >
-                    {isUpdating ? "Processing..." : "Confirm Change"}
-                  </button>
-                </div>
-              </div>
-            </div>
-          )}
-
-          {pendingRefund && (
-            <div className="fixed inset-0 z-60 flex items-center justify-center bg-black/50 p-4">
-              <div
-                className="w-full max-w-md rounded-xl bg-white p-6 shadow-xl"
-                onClick={(event) => event.stopPropagation()}
-              >
-                <h3 className="text-lg font-semibold text-slate-900">
-                  Confirm Payment Refund
-                </h3>
-
-                <p className="mt-3 text-sm text-slate-600">
-                  Are you sure you want to refund this payment?
-                </p>
-
-                <div className="mt-4 rounded-lg bg-amber-50 p-3 text-sm text-amber-700">
-                  This action will refund the payment, cancel the order, and
-                  restore the reserved inventory.
-                </div>
-
-                <div className="mt-6 flex justify-end gap-3">
-                  <button
-                    type="button"
-                    disabled={isRefunding}
-                    onClick={() => setPendingRefund(false)}
-                    className="rounded-lg border border-slate-300 px-4 py-2 text-sm font-medium text-slate-700 hover:bg-slate-50 disabled:opacity-50"
-                  >
-                    Go Back
-                  </button>
-
-                  <button
-                    type="button"
-                    disabled={isRefunding}
-                    onClick={handleRefund}
-                    className="rounded-lg bg-rose-600 px-4 py-2 text-sm font-medium text-white hover:bg-rose-700 disabled:cursor-not-allowed disabled:opacity-50"
-                  >
-                    {isRefunding ? "Processing..." : "Confirm Refund"}
-                  </button>
-                </div>
-              </div>
-            </div>
-          )}
-        </div>
-      )}
+          if (!open) {
+            setSelectedOrder(null);
+          }
+        }}
+        onRefresh={() => setRefreshKey((current) => current + 1)}
+      />
     </div>
   );
 };

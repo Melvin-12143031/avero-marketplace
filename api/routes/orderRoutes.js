@@ -8,6 +8,7 @@ import {
   updateOrderStatusController,
   getAllOrdersForAdminController,
   getOrderStatisticsController,
+  getAdminOrderByIdController,
 } from "../controllers/orderController.js";
 
 import protect from "../middleware/authMiddleware.js";
@@ -39,6 +40,14 @@ router.get(
   protect,
   AuthorizeRoles("admin"),
   getAllOrdersForAdminController,
+);
+
+// Get a single order by ID (Admin only)
+router.get(
+  "/admin/:id",
+  protect,
+  AuthorizeRoles("admin"),
+  getAdminOrderByIdController,
 );
 
 // Get a single order by ID

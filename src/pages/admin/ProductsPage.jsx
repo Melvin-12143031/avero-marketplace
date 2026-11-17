@@ -88,6 +88,11 @@ const ProductsPage = () => {
           totalPages: data.pagination.totalPages,
         });
       } catch (error) {
+        setProducts([]);
+        setPagination({
+          totalProducts: 0,
+          totalPages: 0,
+        });
         toast.error(error.message || "Failed to load products.");
       } finally {
         setIsLoading(false);
@@ -100,6 +105,21 @@ const ProductsPage = () => {
   const handleImageUpload = async (e) => {
     const file = e.target.files[0];
     if (!file) return;
+
+    const allowedTypes = ["image/jpeg", "image/png", "image/webp"];
+    const maxFileSize = 5 * 1024 * 1024; // 5 MB
+
+    if (!allowedTypes.includes(file.type)) {
+      toast.error("Only JPG, PNG, and WebP images are allowed.");
+      e.target.value = "";
+      return;
+    }
+
+    if (file.size > maxFileSize) {
+      toast.error("Image size must not exceed 5 MB.");
+      e.target.value = "";
+      return;
+    }
 
     setIsUploading(true);
 

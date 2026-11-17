@@ -246,6 +246,64 @@ const getOrderById = async (orderId, userId) => {
   };
 };
 
+const getAdminOrderById = async (orderId) => {
+  const orderResult = await pool.query(
+    `
+    SELECT *
+    FROM orders
+    WHERE id = $1
+    `,
+    [orderId],
+  );
+
+  if (orderResult.rows.length === 0) {
+    return null;
+  }
+
+  const order = orderResult.rows[0];
+
+  const itemsResult = await pool.query(
+    `
+      SELECT
+        id,
+        product_id,
+        product_name,
+        quantity,
+        unit_price,
+        subtotal
+      FROM order_items
+      WHERE order_id = $1
+      ORDER BY created_at ASC
+    `,
+    [orderId],
+  );
+
+  const paymentResult = await pool.query(
+    `
+      SELECT
+        id,
+        payment_method,
+        payment_reference,
+        amount,
+        status,
+        paid_at,
+        created_at
+      FROM payments
+      WHERE order_id = $1
+      ORDER BY created_at DESC
+      LIMIT 1
+    `,
+    [orderId],
+  );
+
+  return {
+    ...order,
+    shipping_address: JSON.parse(order.shipping_address),
+    items: itemsResult.rows,
+    payment: paymentResult.rows[0] || null,
+  };
+};
+
 const getAllOrders = async (userId) => {
   const ordersResult = await pool.query(
     `
@@ -630,6 +688,7 @@ const getOrderStatistics = async () => {
       COALESCE(
         SUM(total) FILTER (
           WHERE payment_status = 'paid'
+          AND status != 'cancelled'
         ),
         0
       ) AS total_revenue,
@@ -637,6 +696,7 @@ const getOrderStatistics = async () => {
       COALESCE(
       AVG(total) FILTER (
       WHERE payment_status = 'paid'
+      AND status != 'cancelled'
       ),
       0
       ) AS average_order_value
@@ -656,6 +716,7 @@ const getOrderStatistics = async () => {
     COUNT(*) AS order_count
     FROM orders
     WHERE payment_status = 'paid'
+    AND status != 'cancelled'
     AND created_at >= DATE_TRUNC('month', CURRENT_DATE) - INTERVAL '5 months'
     GROUP BY DATE_TRUNC('month', created_at)
     ORDER BY month ASC
@@ -690,4 +751,5 @@ export {
   updateOrderStatus,
   getAllOrdersForAdmin,
   getOrderStatistics,
+  getAdminOrderById,
 };

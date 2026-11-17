@@ -45,7 +45,9 @@ const useProductCatalog = () => {
     const matchesCategory =
       selectedCategory === "All" || product.category === selectedCategory;
 
-    return matchesSearch && matchesCategory;
+    const isInStock = Number(product.stock_quantity) > 0;
+
+    return matchesSearch && matchesCategory && isInStock;
   });
 
   const sortedProducts = [...filteredProducts].sort((a, b) => {

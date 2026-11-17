@@ -15,7 +15,7 @@ const DashboardStatCard = ({ title, value, description, icon: Icon }) => {
       </CardHeader>
 
       <CardContent>
-        <div className="text-2xl font-bold">{value}</div>
+        <div className="text-2xl font-bold">{value ?? 0}</div>
 
         {description && (
           <CardDescription className="mt-1">{description}</CardDescription>

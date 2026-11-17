@@ -9,6 +9,10 @@ import {
   AlertTriangle,
   PackageX,
   Boxes,
+  Crown,
+  Repeat2,
+  ShoppingBag,
+  UserRound,
 } from "lucide-react";
 
 import {
@@ -91,14 +95,16 @@ const AdminDashboardPage = () => {
     );
   }
 
-  const monthlyRevenue = statistics.orders.monthly_revenue.map((item) => ({
-    month: new Date(`${item.month}-01T00:00:00`).toLocaleDateString("en-PH", {
-      month: "short",
-      year: "numeric",
+  const monthlyRevenue = (statistics.orders.monthly_revenue || []).map(
+    (item) => ({
+      month: new Date(`${item.month}-01T00:00:00`).toLocaleDateString("en-PH", {
+        month: "short",
+        year: "numeric",
+      }),
+      revenue: Number(item.revenue),
+      orderCount: Number(item.order_count),
     }),
-    revenue: Number(item.revenue),
-    orderCount: Number(item.order_count),
-  }));
+  );
 
   const orderStatusData = [
     { name: "Pending", value: Number(statistics.orders.pending_orders) },
@@ -152,6 +158,43 @@ const AdminDashboardPage = () => {
           description="Registered customer accounts"
           icon={Users}
         />
+      </div>
+
+      {/* Customer Segmentation */}
+      <div className="mt-10">
+        <h2 className="text-lg font-semibold text-slate-900">
+          Customer Segmentation
+        </h2>
+
+        <div className="mt-4 grid gap-4 sm:grid-cols-2 lg:grid-cols-4">
+          <DashboardStatCard
+            title="High-Value Customers"
+            value={statistics.customers.segments.highValue}
+            description="₱10,000+ in successful purchases"
+            icon={Crown}
+          />
+
+          <DashboardStatCard
+            title="Repeat Buyers"
+            value={statistics.customers.segments.repeatBuyer}
+            description="2 or more successful orders"
+            icon={Repeat2}
+          />
+
+          <DashboardStatCard
+            title="One-Time Buyers"
+            value={statistics.customers.segments.oneTimeBuyer}
+            description="Exactly 1 successful order"
+            icon={ShoppingBag}
+          />
+
+          <DashboardStatCard
+            title="No Purchases"
+            value={statistics.customers.segments.noPurchases}
+            description="No successful orders yet"
+            icon={UserRound}
+          />
+        </div>
       </div>
 
       <div className="mt-10">

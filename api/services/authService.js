@@ -8,11 +8,10 @@ const registerUser = async ({ fullName, email, password }) => {
   // 1. Check if the email is already registered
   const existingUser = await pool.query(
     `
-        SELECT
-        id
-        FROM users
-        WHERE email = $1
-        `,
+      SELECT id
+      FROM users
+      WHERE email = $1
+    `,
     [email],
   );
 
@@ -26,10 +25,10 @@ const registerUser = async ({ fullName, email, password }) => {
   // 3. Create the user
   const result = await pool.query(
     `
-        INSERT INTO users (full_name, email, password_hash)
-        VALUES ($1, $2, $3)
-        RETURNING id, full_name, email
-        `,
+      INSERT INTO users (full_name, email, password_hash)
+      VALUES ($1, $2, $3)
+      RETURNING id, full_name, email
+    `,
     [fullName, email, passwordHash],
   );
 
@@ -40,15 +39,16 @@ const loginUser = async ({ email, password }) => {
   // 1. Fetch the user by email
   const result = await pool.query(
     `
-        SELECT
+      SELECT
         id,
         full_name,
         email,
         role,
-        password_hash
-        FROM users
-        WHERE email = $1
-        `,
+        password_hash,
+        is_active
+      FROM users
+      WHERE email = $1
+    `,
     [email],
   );
 
@@ -59,14 +59,19 @@ const loginUser = async ({ email, password }) => {
     throw new Error("Invalid email or password.");
   }
 
-  // 3. Compare the provided password with the stored hash
+  // 3. Verify the password
   const isPasswordValid = await bcrypt.compare(password, user.password_hash);
 
   if (!isPasswordValid) {
     throw new Error("Invalid email or password.");
   }
 
-  // 4. Generate a JWT token
+  // 4. Check account status
+  if (!user.is_active) {
+    throw new Error("Account is deactivated.");
+  }
+
+  // 5. Generate a JWT token
   const token = jwt.sign(
     {
       userId: user.id,
@@ -77,7 +82,7 @@ const loginUser = async ({ email, password }) => {
     },
   );
 
-  // 5. Return the user details and token
+  // 6. Return user details and token
   return {
     token,
     user: {

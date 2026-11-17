@@ -23,7 +23,7 @@ const uploadImageController = async (req, res) => {
           }
         },
       );
-      uploadStream.end(req.file.buffer);
+      uploadStream.end(req.imageBuffer);
     });
 
     return res.status(200).json({

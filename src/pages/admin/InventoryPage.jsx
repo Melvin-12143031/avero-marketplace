@@ -2,7 +2,6 @@ import { useEffect, useState } from "react";
 import { toast } from "sonner";
 import {
   getAdminProducts,
-  getLowStockProducts,
   adjustStock,
   getInventoryMovements,
 } from "../../services/inventoryService";
@@ -71,10 +70,11 @@ const InventoryPage = () => {
         setIsLoading(true);
         setError("");
 
-        const [productData] = await Promise.all([
-          getAdminProducts(currentPage, pageSize, debouncedSearch),
-          getLowStockProducts(),
-        ]);
+        const productData = await getAdminProducts(
+          currentPage,
+          pageSize,
+          debouncedSearch,
+        );
 
         setProducts(productData.products);
         setInventoryStats(productData.statistics);
@@ -130,8 +130,6 @@ const InventoryPage = () => {
         pageSize,
         debouncedSearch,
       );
-
-      await getLowStockProducts();
 
       setProducts(productData.products);
       setInventoryStats(productData.statistics);

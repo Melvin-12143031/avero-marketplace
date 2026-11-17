@@ -14,9 +14,11 @@ import validateRequest from "../middleware/validateRequest.js";
 import { productSchema } from "../validators/productValidator.js";
 import protect from "../middleware/authMiddleware.js";
 import authorizeRoles from "../middleware/authorizeRoles.js";
+import validateImage from "../middleware/validateImageMiddleware.js";
 
 import upload from "../middleware/uploadMiddleware.js";
 import { uploadImageController } from "../controllers/imageController.js";
+import processImage from "../middleware/processImageMiddleware.js";
 
 const router = express.Router();
 
@@ -45,6 +47,8 @@ router.post(
   protect,
   authorizeRoles("admin"),
   upload.single("image"),
+  validateImage,
+  processImage,
   uploadImageController,
 );
 

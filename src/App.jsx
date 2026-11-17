@@ -23,6 +23,7 @@ import { isValidCart, isValidProduct } from "./features/cart/cartUtils";
 import InventoryPage from "./pages/admin/InventoryPage";
 import ProductsPage from "./pages/admin/ProductsPage";
 import OrdersPage from "./pages/admin/OrdersPage";
+import CustomersPage from "./pages/admin/CustomersPage";
 
 const App = () => {
   const [cartItems, setCartItems] = useLocalStorage(
@@ -94,6 +95,7 @@ const App = () => {
               <Route path="/admin/inventory" element={<InventoryPage />} />
               <Route path="/admin/products" element={<ProductsPage />} />
               <Route path="/admin/orders" element={<OrdersPage />} />
+              <Route path="/admin/customers" element={<CustomersPage />} />
             </Route>
           </Route>
         </Route>

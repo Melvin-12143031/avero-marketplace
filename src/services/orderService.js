@@ -99,6 +99,36 @@ export const getAdminOrders = async (
   };
 };
 
+export const getAdminOrderById = async (orderId) => {
+  const response = await apiRequest(`/orders/admin/${orderId}`);
+  const order = response.data.order;
+
+  return {
+    ...order,
+    orderNumber: order.order_number,
+    createdAt: order.created_at,
+    shippingFee: order.shipping_fee,
+    paymentStatus: order.payment_status,
+    customer: order.shipping_address.customer,
+    shippingAddress: order.shipping_address.shippingAddress,
+    items: order.items.map((item) => ({
+      ...item,
+      productId: item.product_id,
+      name: item.product_name,
+      price: item.unit_price,
+    })),
+    payment: order.payment
+      ? {
+          ...order.payment,
+          paymentMethod: order.payment.payment_method,
+          paymentReference: order.payment.payment_reference,
+          paidAt: order.payment.paid_at,
+          paymentCreatedAt: order.payment.created_at,
+        }
+      : null,
+  };
+};
+
 export const getOrderStatistics = async () => {
   const response = await apiRequest(`/orders/admin/statistics`);
   return response.data.statistics;
