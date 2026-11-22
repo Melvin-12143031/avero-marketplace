@@ -1,9 +1,18 @@
 import { useState, useEffect } from "react";
 import { Link, useParams } from "react-router-dom";
-import { CheckCircle, Package, ShoppingBag, FileText } from "lucide-react";
+import {
+  CheckCircle,
+  Package,
+  ShoppingBag,
+  FileText,
+  MapPin,
+  CreditCard,
+  CalendarDays,
+} from "lucide-react";
 
 import { getOrderById, formatPrice } from "../services/orderService";
 import OrderProgress from "../components/orders/OrderProgress";
+import OrderStatusBadge from "../components/orders/OrderStatusBadge";
 import Button from "../components/ui/Button";
 import { generateInvoice } from "../services/invoiceService";
 
@@ -31,7 +40,7 @@ const OrderConfirmationPage = () => {
         setOrder(orderData);
       } catch (error) {
         console.error("Failed to fetch order:", error);
-        setError(`We couldn't find the order you're looking for.`);
+        setError("We couldn't find the order you're looking for.");
       } finally {
         setIsLoading(false);
       }
@@ -42,182 +51,241 @@ const OrderConfirmationPage = () => {
 
   if (isLoading) {
     return (
-      <main className="flex min-h-screen items-center justify-center bg-slate-50">
-        <p className="text-slate-600">Loading order details...</p>
-      </main>
+      <div className="flex min-h-[70vh] items-center justify-center bg-[#FAF8F4] px-4">
+        <div className="text-center">
+          <div className="mx-auto h-8 w-8 animate-spin rounded-full border-2 border-[#E4DCCE] border-t-[#B3261E]" />
+          <p className="mt-4 text-sm text-[#6B6258]">
+            Loading order details...
+          </p>
+        </div>
+      </div>
     );
   }
 
   if (error || !order) {
     return (
-      <main className="flex min-h-screen items-center justify-center bg-slate-50 px-5">
-        <div className="max-w-md text-center">
-          <h1 className="text-2xl font-bold text-slate-900">Order Not Found</h1>
+      <div className="flex min-h-[70vh] items-center justify-center bg-[#FAF8F4] px-5">
+        <div className="w-full max-w-md rounded-2xl border border-[#E4DCCE] bg-white p-8 text-center">
+          <div className="mx-auto flex h-14 w-14 items-center justify-center rounded-full bg-[#F5E5E2] text-[#A33B32]">
+            <Package size={26} />
+          </div>
 
-          <p className="mt-3 text-slate-600">
-            We couldn't find the order you're looking for.
+          <h1 className="mt-5 font-serif text-2xl font-semibold text-[#1C1C1C]">
+            Order Not Found
+          </h1>
+
+          <p className="mt-3 text-sm leading-6 text-[#6B6258]">
+            {error || "We couldn't find the order you're looking for."}
           </p>
 
           <Link
-            to="/"
-            className="mt-6 inline-flex items-center justify-center rounded-lg bg-indigo-600 px-6 py-3 text-sm font-semibold text-white transition hover:bg-indigo-500"
+            to="/shop"
+            className="mt-6 inline-flex items-center justify-center rounded-md bg-[#B3261E] px-6 py-3 text-sm font-semibold text-white transition-colors hover:bg-[#8F1E19]"
           >
             Back to Shopping
           </Link>
         </div>
-      </main>
+      </div>
     );
   }
 
   return (
-    <main className="min-h-screen bg-slate-50 px-5 py-16">
-      <div className="mx-auto max-w-2xl rounded-2xl border border-slate-200 bg-white p-8 text-center shadow-sm sm:p-12 print:hidden">
-        <div className="mx-auto flex h-16 w-16 items-center justify-center rounded-full bg-green-50 text-green-600">
-          <CheckCircle size={36} />
-        </div>
+    <div className="min-h-screen bg-[#FAF8F4] px-4 py-10 sm:px-6 lg:px-8 lg:py-14">
+      <div className="mx-auto max-w-4xl">
+        {/* Confirmation header */}
+        <section className="rounded-2xl border border-[#E4DCCE] bg-white px-5 py-10 text-center shadow-sm sm:px-10 sm:py-12">
+          <div className="mx-auto flex h-16 w-16 items-center justify-center rounded-full bg-[#E5EDE5] text-[#496B50]">
+            <CheckCircle size={34} />
+          </div>
 
-        <h1 className="mt-6 text-3xl font-bold tracking-tight text-slate-900">
-          Thank you for your order!
-        </h1>
-
-        <p className="mt-3 text-slate-600">
-          Your order has been successfully placed. We'll keep you updated on its
-          progress.
-        </p>
-
-        <div className="mt-6 rounded-lg bg-slate-50 p-4">
-          <p className="text-sm text-slate-500">Order Reference</p>
-          <p className="mt-1 break-all font-semibold text-slate-900">
-            {order.orderNumber}
+          <p className="mt-6 text-xs font-semibold uppercase tracking-[0.2em] text-[#B3261E]">
+            Order Confirmation
           </p>
-        </div>
 
-        <div className="mt-4 text-sm text-slate-500">
-          Order Date:{" "}
-          <span className="font-medium text-slate-700">
-            {new Date(order.createdAt).toLocaleString("en-PH", {
-              dateStyle: "medium",
-              timeStyle: "short",
-            })}
-          </span>
-        </div>
+          <h1 className="mt-3 font-serif text-3xl font-semibold tracking-tight text-[#1C1C1C] sm:text-4xl">
+            Thank you for your order!
+          </h1>
 
-        <div className="mt-8 text-left">
-          <h2 className="text-lg font-semibold text-slate-900">
-            Order Details
-          </h2>
+          <p className="mx-auto mt-3 max-w-xl text-sm leading-6 text-[#6B6258]">
+            Your order has been successfully placed. We'll keep you updated as
+            it makes its way to you.
+          </p>
 
-          <div className="mt-4 divide-y divide-slate-100 border-y border-slate-100">
+          <div className="mx-auto mt-8 max-w-lg rounded-xl bg-[#F5F2ED] p-5">
+            <p className="text-xs font-semibold uppercase tracking-wider text-[#8A8176]">
+              Order Reference
+            </p>
+
+            <p className="mt-2 break-all text-sm font-semibold text-[#1C1C1C] sm:text-base">
+              {order.orderNumber}
+            </p>
+
+            <div className="mt-4 flex items-center justify-center gap-2 text-sm text-[#6B6258]">
+              <CalendarDays size={16} />
+              <span>
+                {new Date(order.createdAt).toLocaleString("en-PH", {
+                  dateStyle: "medium",
+                  timeStyle: "short",
+                })}
+              </span>
+            </div>
+          </div>
+        </section>
+
+        {/* Order details */}
+        <section className="mt-6 rounded-2xl border border-[#E4DCCE] bg-white p-5 shadow-sm sm:p-7">
+          <div className="flex items-center gap-3">
+            <div className="flex h-10 w-10 items-center justify-center rounded-full bg-[#EDE6D8] text-[#6B6258]">
+              <ShoppingBag size={20} />
+            </div>
+
+            <div>
+              <h2 className="font-serif text-xl font-semibold text-[#1C1C1C]">
+                Order Summary
+              </h2>
+              <p className="mt-1 text-xs text-[#8A8176]">
+                {order.items.length}{" "}
+                {order.items.length === 1 ? "item" : "items"} in this order
+              </p>
+            </div>
+          </div>
+
+          <div className="mt-6 divide-y divide-[#F0EBE3] border-y border-[#F0EBE3]">
             {order.items.map((item) => (
               <div
                 key={item.productId}
-                className="flex items-center justify-between gap-4 py-4"
+                className="flex items-center justify-between gap-4 py-5"
               >
                 <div className="min-w-0">
-                  <p className="truncate text-sm font-medium text-slate-900">
+                  <p className="break-words text-sm font-semibold text-[#1C1C1C]">
                     {item.name}
                   </p>
-                  <p className="mt-1 text-xs text-slate-500">
+
+                  <p className="mt-1 text-xs text-[#8A8176]">
                     {item.quantity} × {formatPrice(item.price)}
                   </p>
                 </div>
 
-                <p className="shrink-0 text-sm font-semibold text-slate-900">
+                <p className="shrink-0 text-sm font-semibold tabular-nums text-[#1C1C1C]">
                   {formatPrice(item.price * item.quantity)}
                 </p>
               </div>
             ))}
           </div>
 
-          <div className="mt-5 space-y-3">
-            <div className="flex justify-between text-sm">
-              <span className="text-slate-500">Subtotal</span>
-              <span className="font-medium text-slate-900">
+          <div className="ml-auto mt-6 max-w-sm space-y-3">
+            <div className="flex justify-between gap-4 text-sm">
+              <span className="text-[#6B6258]">Subtotal</span>
+              <span className="font-medium tabular-nums text-[#1C1C1C]">
                 {formatPrice(order.subtotal)}
               </span>
             </div>
 
-            <div className="flex justify-between text-sm">
-              <span className="text-slate-500">Shipping Fee</span>
-              <span className="font-medium text-slate-900">
+            <div className="flex justify-between gap-4 text-sm">
+              <span className="text-[#6B6258]">Shipping Fee</span>
+              <span className="font-medium tabular-nums text-[#1C1C1C]">
                 {formatPrice(order.shippingFee)}
               </span>
             </div>
 
-            <div className="flex justify-between border-t border-slate-100 pt-4">
-              <span className="font-semibold text-slate-900">Total</span>
-              <span className="text-xl font-bold text-indigo-600">
+            <div className="flex justify-between gap-4 border-t border-[#E4DCCE] pt-4">
+              <span className="font-semibold text-[#1C1C1C]">Total Amount</span>
+
+              <span className="text-xl font-bold tabular-nums text-[#B3261E]">
                 {formatPrice(order.total)}
               </span>
             </div>
           </div>
-        </div>
+        </section>
 
+        {/* Order progress */}
         <OrderProgress status={order.status} />
 
-        <div className="mt-8 rounded-xl border border-slate-200 p-5 text-left">
-          <div className="flex items-center gap-2">
-            <Package size={20} className="text-indigo-600" />
+        {/* Shipping information */}
+        <section className="mt-6 rounded-2xl border border-[#E4DCCE] bg-white p-5 shadow-sm sm:p-7">
+          <div className="flex items-center gap-3">
+            <div className="flex h-10 w-10 items-center justify-center rounded-full bg-[#EDE6D8] text-[#6B6258]">
+              <MapPin size={20} />
+            </div>
 
-            <h2 className="text-lg font-semibold text-slate-900">
-              Shipping Information
-            </h2>
+            <div>
+              <h2 className="font-serif text-xl font-semibold text-[#1C1C1C]">
+                Shipping Information
+              </h2>
+              <p className="mt-1 text-xs text-[#8A8176]">
+                Delivery details for this order
+              </p>
+            </div>
           </div>
 
-          <div className="mt-4 space-y-2 text-sm">
-            <p className="font-medium text-slate-900">
+          <div className="mt-6 space-y-2 text-sm">
+            <p className="font-semibold text-[#1C1C1C]">
               {order.customer.fullName}
             </p>
 
-            <p className="text-slate-600">{order.customer.email}</p>
+            <p className="text-[#6B6258]">{order.customer.email}</p>
+            <p className="text-[#6B6258]">{order.customer.phone}</p>
 
-            <p className="text-slate-600">{order.customer.phone}</p>
-
-            <p className="pt-2 text-slate-600">
+            <div className="border-t border-[#F0EBE3] pt-4 leading-6 text-[#6B6258]">
               {order.shippingAddress.address}
               <br />
               {order.shippingAddress.city}, {order.shippingAddress.province}
               <br />
               {order.shippingAddress.postalCode}
-            </p>
+            </div>
           </div>
-        </div>
+        </section>
 
-        <div className="mt-8 grid grid-cols-1 gap-4 sm:grid-cols-2">
-          <div className="rounded-xl bg-slate-50 p-5">
-            <Package className="mx-auto text-indigo-600" size={24} />
-            <p className="mt-2 text-sm font-medium text-slate-500">
-              Order Status
-            </p>
-            <p className="mt-1 font-semibold capitalize text-slate-900">
-              {order.status}
-            </p>
+        {/* Order and payment information */}
+        <section className="mt-6 grid gap-5 sm:grid-cols-2">
+          <div className="rounded-2xl border border-[#E4DCCE] bg-white p-6 shadow-sm">
+            <div className="flex items-center gap-3">
+              <Package size={20} className="text-[#B3261E]" />
+              <h2 className="font-serif text-lg font-semibold text-[#1C1C1C]">
+                Order Status
+              </h2>
+            </div>
+
+            <div className="mt-5">
+              <OrderStatusBadge status={order.status} />
+            </div>
           </div>
 
-          <div className="rounded-xl bg-slate-50 p-5">
-            <ShoppingBag className="mx-auto text-indigo-600" size={24} />
-            <p className="mt-2 text-sm font-medium text-slate-500">
-              Payment Status
-            </p>
-            <p className="mt-1 font-semibold capitalize text-slate-900">
-              {order.paymentStatus}
-            </p>
-            <p className="mt-3 text-sm font-medium text-slate-500">
-              Payment Method
-            </p>
+          <div className="rounded-2xl border border-[#E4DCCE] bg-white p-6 shadow-sm">
+            <div className="flex items-center gap-3">
+              <CreditCard size={20} className="text-[#B3261E]" />
+              <h2 className="font-serif text-lg font-semibold text-[#1C1C1C]">
+                Payment Information
+              </h2>
+            </div>
 
-            <p className="mt-1 font-semibold text-slate-900">
-              {order.payment
-                ? getPaymentMethodLabel(order.payment.paymentMethod)
-                : "Not available"}
-            </p>
+            <div className="mt-5">
+              <p className="text-xs font-semibold uppercase tracking-wider text-[#8A8176]">
+                Payment Status
+              </p>
+
+              <div className="mt-2">
+                <OrderStatusBadge status={order.paymentStatus} />
+              </div>
+
+              <p className="mt-5 text-xs font-semibold uppercase tracking-wider text-[#8A8176]">
+                Payment Method
+              </p>
+
+              <p className="mt-2 text-sm font-semibold text-[#1C1C1C]">
+                {order.payment
+                  ? getPaymentMethodLabel(order.payment.paymentMethod)
+                  : "Not available"}
+              </p>
+            </div>
           </div>
-        </div>
+        </section>
 
-        <div className="mt-8 flex flex-wrap items-center justify-center gap-4">
+        {/* Actions */}
+        <section className="mt-8 flex flex-col items-stretch justify-center gap-3 sm:flex-row">
           <Link
-            to="/"
-            className="inline-flex min-h-11 items-center justify-center rounded-lg bg-indigo-600 px-6 py-3 text-sm font-semibold text-white transition hover:bg-indigo-500"
+            to="/shop"
+            className="inline-flex min-h-11 items-center justify-center rounded-md bg-[#B3261E] px-6 py-3 text-sm font-semibold text-white transition-colors hover:bg-[#8F1E19]"
           >
             Continue Shopping
           </Link>
@@ -231,9 +299,9 @@ const OrderConfirmationPage = () => {
             <FileText size={18} />
             View Invoice PDF
           </Button>
-        </div>
+        </section>
       </div>
-    </main>
+    </div>
   );
 };
 

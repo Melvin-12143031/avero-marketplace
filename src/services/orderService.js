@@ -16,7 +16,7 @@ export const createOrder = async (shippingInfo, cartItems) => {
     },
 
     items: cartItems.map((item) => ({
-      productId: item.id,
+      productId: item.product_id,
       quantity: item.quantity,
     })),
   };

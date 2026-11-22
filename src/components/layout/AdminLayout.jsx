@@ -5,6 +5,7 @@ import {
   Boxes,
   ShoppingBag,
   Users,
+  MessageSquareText,
 } from "lucide-react";
 
 const AdminLayout = () => {
@@ -30,11 +31,15 @@ const AdminLayout = () => {
       path: "/admin/orders",
       icon: ShoppingBag,
     },
-
     {
       name: "Customers",
       path: "/admin/customers",
       icon: Users,
+    },
+    {
+      name: "Contact Inquiries",
+      path: "/admin/contact",
+      icon: MessageSquareText,
     },
   ];
 

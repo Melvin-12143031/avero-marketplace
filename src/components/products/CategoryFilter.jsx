@@ -1,16 +1,12 @@
-
-const CategoryFilter = ({
-  categories,
-  selectedCategory,
-  onSelectCategory,
-}) => {
+const CategoryFilter = ({ categories, selectedCategory, onSelectCategory }) => {
   return (
     <div
-      className="flex flex-wrap gap-2"
+      role="group"
       aria-label="Filter products by category"
+      className="flex flex-wrap gap-2"
     >
       {categories.map((category) => {
-        const isSelected = category === selectedCategory
+        const isSelected = category === selectedCategory;
 
         return (
           <button
@@ -18,18 +14,18 @@ const CategoryFilter = ({
             type="button"
             aria-pressed={isSelected}
             onClick={() => onSelectCategory(category)}
-            className={`rounded-full px-4 py-2 text-sm font-medium transition-colors ${
+            className={`rounded-sm border px-4 py-2.5 text-sm font-medium transition-colors ${
               isSelected
-                ? 'bg-indigo-600 text-white'
-                : 'border border-slate-200 bg-white text-slate-600 hover:border-indigo-300 hover:text-indigo-600'
+                ? "border-[#1C1C1C] bg-[#1C1C1C] text-white"
+                : "border-[#E4DCCE] bg-white text-[#6B6258] hover:border-[#B3261E] hover:text-[#B3261E]"
             }`}
           >
             {category}
           </button>
-        )
+        );
       })}
     </div>
-  )
-}
+  );
+};
 
-export default CategoryFilter
+export default CategoryFilter;

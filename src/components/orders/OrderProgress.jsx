@@ -1,90 +1,84 @@
-import {
-    CheckCircle,
-    Package,
-    Truck,
-    Home,
-} from 'lucide-react'
+import { CheckCircle, Package, Truck, Home } from "lucide-react";
 
 const OrderProgress = ({ status }) => {
-    const steps = [
-        { label: 'Order Placed', icon: CheckCircle },
-        { label: 'Processing', icon: Package },
-        { label: 'Shipped', icon: Truck },
-        { label: 'Delivered', icon: Home },
-    ]
+  const steps = [
+    { label: "Order Placed", icon: CheckCircle },
+    { label: "Processing", icon: Package },
+    { label: "Shipped", icon: Truck },
+    { label: "Delivered", icon: Home },
+  ];
 
+  const normalizedStatus = status?.toLowerCase();
 
+  const statusOrder = {
+    pending: 0,
+    processing: 1,
+    shipped: 2,
+    delivered: 3,
+  };
 
-    const normalizedStatus = status?.toLowerCase()
+  const currentStep = statusOrder[normalizedStatus] ?? -1;
+  const isCancelled = normalizedStatus === "cancelled";
 
-    const statusOrder = {
-        pending: 0,
-        processing: 1,
-        shipped: 2,
-        delivered: 3,
-    }
+  return (
+    <div className="mt-8 rounded-2xl border border-[#E4DCCE] bg-white p-5 text-left sm:p-6">
+      <h2 className="font-serif text-lg font-semibold text-[#1C1C1C]">
+        Order Progress
+      </h2>
 
-    const currentStep = statusOrder[normalizedStatus] ?? -1
-    const isCancelled = normalizedStatus === 'cancelled'
+      {isCancelled && (
+        <p className="mt-4 rounded-lg bg-[#F5E5E2] p-3 text-sm font-medium text-[#A33B32]">
+          This order has been cancelled.
+        </p>
+      )}
 
-    return (
-        <div className="mt-8 rounded-xl border border-slate-200 p-5 text-left">
-            <h2 className="text-lg font-semibold text-slate-900">
-                Order Progress
-            </h2>
+      {!isCancelled && currentStep === -1 && (
+        <p className="mt-4 rounded-lg bg-[#F5EBD8] p-3 text-sm text-[#946B2D]">
+          Order progress is currently unavailable.
+        </p>
+      )}
 
-            {isCancelled && (
-                <p className="mt-4 rounded-lg bg-red-50 p-3 text-sm font-medium text-red-700">
-                    This order has been cancelled.
+      <div className="mt-6 space-y-6">
+        {steps.map((step, index) => {
+          const Icon = step.icon;
+          const isCompleted = !isCancelled && index <= currentStep;
+          const isCurrent = !isCancelled && index === currentStep;
+
+          return (
+            <div key={step.label} className="flex items-center gap-4">
+              <div
+                className={`flex h-10 w-10 shrink-0 items-center justify-center rounded-full transition-colors ${
+                  isCurrent
+                    ? "bg-[#B3261E] text-white"
+                    : isCompleted
+                      ? "bg-[#EDE6D8] text-[#6B6258]"
+                      : "bg-[#F5F2ED] text-[#A69D92]"
+                }`}
+              >
+                <Icon size={20} />
+              </div>
+
+              <div>
+                <p
+                  className={`font-medium ${
+                    isCompleted ? "text-[#1C1C1C]" : "text-[#A69D92]"
+                  }`}
+                >
+                  {step.label}
                 </p>
-            )}
 
-            <div className="mt-6 space-y-6">
-                {steps.map((step, index) => {
-                    const Icon = step.icon
-                    const isCompleted = !isCancelled && index <= currentStep
-                    const isCurrent = !isCancelled && index === currentStep
-
-                    return (
-                        <div key={step.label} className="flex items-center gap-4">
-                            <div
-                                className={`flex h-10 w-10 shrink-0 items-center justify-center rounded-full ${isCompleted
-                                    ? 'bg-indigo-100 text-indigo-600'
-                                    : 'bg-slate-100 text-slate-400'
-                                    }`}
-                            >
-                                <Icon size={20} />
-                            </div>
-
-                            <div>
-                                <p
-                                    className={`font-medium ${isCompleted
-                                        ? 'text-slate-900'
-                                        : 'text-slate-400'
-                                        }`}
-                                >
-                                    {step.label}
-                                </p>
-
-                                {isCurrent && !isCancelled && (
-                                    <p className="mt-1 text-xs text-indigo-600">
-                                        Current Status
-                                    </p>
-                                )}
-
-                                {!isCancelled && currentStep === -1 && (
-                                    <p className="mt-4 rounded-lg bg-amber-50 p-3 text-sm text-amber-700">
-                                        Order progress is currently unavailable.
-                                    </p>
-                                )}
-
-                            </div>
-                        </div>
-                    )
-                })}
+                {isCurrent && !isCancelled && (
+                  <p className="mt-1 text-xs font-semibold text-[#B3261E]">
+                    Current Status
+                  </p>
+                )}
+              </div>
             </div>
-        </div>
-    )
-}
+          );
+        })}
+      </div>
+    </div>
+  );
+};
 
-export default OrderProgress
+export default OrderProgress;

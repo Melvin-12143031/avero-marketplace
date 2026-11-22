@@ -1,5 +1,5 @@
 import { useEffect, useState } from "react";
-import { Download, Eye, RefreshCw } from "lucide-react";
+import { Download, Eye, RefreshCw, Users } from "lucide-react";
 import { toast } from "sonner";
 import CustomerDetailsModal from "@/components/admin/customers/CustomerDetailsModal";
 
@@ -11,6 +11,19 @@ import {
 } from "../../services/customerService";
 
 import { exportCustomersToCSV } from "@/utils/csvUtils";
+
+const formatCurrency = (amount) =>
+  Number(amount ?? 0).toLocaleString("en-PH", {
+    style: "currency",
+    currency: "PHP",
+  });
+
+const formatDate = (date) =>
+  new Date(date).toLocaleDateString("en-PH", {
+    year: "numeric",
+    month: "short",
+    day: "numeric",
+  });
 
 const CustomersPage = () => {
   const [customers, setCustomers] = useState([]);
@@ -43,6 +56,7 @@ const CustomersPage = () => {
   const handleExportCustomers = async () => {
     try {
       setIsExporting(true);
+
       const response = await exportAdminCustomers({
         search: debouncedSearch,
         status,
@@ -105,41 +119,87 @@ const CustomersPage = () => {
     setCurrentPage(1);
   };
 
+  const getEmptyMessage = () => {
+    if (debouncedSearch) {
+      return "No customers match your search and selected filter.";
+    }
+
+    if (status === "deactivated") {
+      return "No deactivated customers found.";
+    }
+
+    if (status === "active") {
+      return "No active customers found.";
+    }
+
+    return "No customers found.";
+  };
+
+  const renderEmptyState = () => (
+    <div className="flex flex-col items-center px-5 py-14 text-center">
+      <Users size={32} className="mb-3 text-[#C9C0B3]" />
+
+      <p className="font-medium text-[#514940]">No customers found</p>
+
+      <p className="mt-1 text-sm text-[#A1988D]">{getEmptyMessage()}</p>
+    </div>
+  );
+
+  const renderLoadingState = () => (
+    <div className="flex flex-col items-center gap-3 px-5 py-14 text-[#8A8176]">
+      <RefreshCw className="animate-spin text-[#B3261E]" size={28} />
+      <p>Loading customers...</p>
+    </div>
+  );
+
+  const renderErrorState = () => (
+    <div className="flex flex-col items-center gap-3 px-5 py-14 text-center">
+      <p className="text-sm text-rose-600">{error}</p>
+      <button
+        type="button"
+        onClick={() => setCurrentPage((page) => page)}
+        className="text-sm font-medium text-[#B3261E] hover:underline"
+      >
+        Please try again by changing the page or filter.
+      </button>
+    </div>
+  );
+
   return (
-    <main className="mx-auto max-w-7xl px-6 py-8">
+    <main className="min-w-0 space-y-6">
       {/* Page Header */}
-      <div className="mb-8">
-        <h1 className="text-2xl font-bold text-slate-900">
+      <div>
+        <h1 className="text-2xl font-semibold tracking-tight text-[#1C1C1C]">
           Customer Management
         </h1>
 
-        <p className="mt-2 text-slate-600">
+        <p className="mt-1 text-sm text-[#8A8176]">
           Manage your registered customers and view their activity.
         </p>
       </div>
 
-      {/* Customers Table */}
-      <div className="mt-8 overflow-hidden rounded-xl border border-slate-200 bg-white">
-        {/* Table Header */}
-        <div className="flex flex-col gap-4 border-b border-slate-200 p-6 sm:flex-row sm:items-center sm:justify-between">
-          <div>
-            <h2 className="text-lg font-semibold text-slate-900">
-              Marketplace Customers
-            </h2>
+      {/* Customers Section */}
+      <div className="overflow-hidden rounded-xl border border-[#E4DCCE] bg-white shadow-sm">
+        {/* Section Header */}
+        <div className="space-y-5 border-b border-[#EAE4DA] p-5">
+          <div className="flex flex-col justify-between gap-3 sm:flex-row sm:items-center">
+            <div>
+              <h2 className="text-lg font-semibold text-[#1C1C1C]">
+                Marketplace Customers
+              </h2>
 
-            <p className="mt-1 text-sm text-slate-500">
-              {pagination.totalCustomers}{" "}
-              {pagination.totalCustomers === 1 ? "customer" : "customers"}{" "}
-              found.
-            </p>
-          </div>
+              <p className="mt-1 text-sm text-[#8A8176]">
+                {pagination.totalCustomers}{" "}
+                {pagination.totalCustomers === 1 ? "customer" : "customers"}{" "}
+                found.
+              </p>
+            </div>
 
-          <div className="flex flex-col gap-3 sm:flex-row sm:items-center">
             <button
               type="button"
               onClick={handleExportCustomers}
               disabled={isExporting || pagination.totalCustomers === 0}
-              className="inline-flex h-10 items-center justify-center gap-2 rounded-lg bg-slate-900 px-4 text-sm font-medium text-white transition hover:bg-slate-800 disabled:cursor-not-allowed disabled:opacity-50"
+              className="inline-flex h-10 items-center justify-center gap-2 rounded-lg bg-[#1C1C1C] px-4 text-sm font-medium text-white transition hover:bg-[#38332E] disabled:cursor-not-allowed disabled:opacity-50"
             >
               {isExporting ? (
                 <RefreshCw size={16} className="animate-spin" />
@@ -149,17 +209,23 @@ const CustomersPage = () => {
 
               {isExporting ? "Exporting..." : "Export CSV"}
             </button>
+          </div>
 
-            <SearchInput
-              value={search}
-              onChange={setSearch}
-              placeholder="Search customers by name or email..."
-            />
+          {/* Search and Filters */}
+          <div className="grid grid-cols-1 gap-3 sm:grid-cols-2 xl:grid-cols-[minmax(220px,1fr)_auto_auto]">
+            <div className="min-w-0">
+              <SearchInput
+                value={search}
+                onChange={setSearch}
+                placeholder="Search customers by name or email..."
+              />
+            </div>
+
             <select
               value={sort}
               onChange={handleSortChange}
               aria-label="Sort customers"
-              className="h-10 rounded-lg border border-slate-200 bg-white px-3 text-sm text-slate-700 outline-none transition focus:border-slate-400 focus:ring-2 focus:ring-slate-100"
+              className="h-10 w-full rounded-lg border border-[#E4DCCE] bg-white px-3 text-sm text-[#514940] outline-none transition focus:border-[#B3261E] focus:ring-2 focus:ring-[#B3261E]/10"
             >
               <option value="newest">Newest Registered</option>
               <option value="oldest">Oldest Registered</option>
@@ -168,11 +234,12 @@ const CustomersPage = () => {
               <option value="spent_desc">Highest Spending</option>
               <option value="orders_desc">Most Orders</option>
             </select>
+
             <select
               value={status}
               onChange={handleStatusChange}
               aria-label="Filter customers by account status"
-              className="h-10 rounded-lg border border-slate-200 bg-white px-3 text-sm text-slate-700 outline-none transition focus:border-slate-400 focus:ring-2 focus:ring-slate-100"
+              className="h-10 w-full rounded-lg border border-[#E4DCCE] bg-white px-3 text-sm text-[#514940] outline-none transition focus:border-[#B3261E] focus:ring-2 focus:ring-[#B3261E]/10"
             >
               <option value="all">All Customers</option>
               <option value="active">Active</option>
@@ -181,107 +248,162 @@ const CustomersPage = () => {
           </div>
         </div>
 
-        {/* Customers Table */}
-        <div className="overflow-x-auto">
-          <table className="w-full text-left text-sm">
-            <thead className="bg-slate-50 text-slate-600">
-              <tr>
-                <th className="px-6 py-4 font-medium">Customer</th>
-                <th className="px-6 py-4 font-medium">Registered</th>
-                <th className="px-6 py-4 font-medium">Orders</th>
-                <th className="px-6 py-4 font-medium">Total Spent</th>
-                <th className="px-6 py-4 font-medium">Actions</th>
-              </tr>
-            </thead>
+        {/* Desktop Table */}
+        <div className="hidden overflow-x-auto md:block">
+          {isLoading && customers.length === 0 ? (
+            renderLoadingState()
+          ) : error ? (
+            renderErrorState()
+          ) : customers.length === 0 ? (
+            renderEmptyState()
+          ) : (
+            <table className="w-full text-left text-sm">
+              <thead className="bg-[#F8F6F1] text-xs font-semibold uppercase tracking-wide text-[#8A8176]">
+                <tr>
+                  <th className="px-5 py-4">Customer</th>
+                  <th className="px-5 py-4">Registered</th>
+                  <th className="px-5 py-4">Orders</th>
+                  <th className="px-5 py-4">Total Spent</th>
+                  <th className="px-5 py-4">Account</th>
+                  <th className="px-5 py-4 text-right">Actions</th>
+                </tr>
+              </thead>
 
-            <tbody className="divide-y divide-slate-200">
-              {isLoading && customers.length === 0 ? (
-                <tr>
-                  <td
-                    colSpan={5}
-                    className="px-6 py-16 text-center text-slate-500"
-                  >
-                    <div className="flex flex-col items-center gap-3">
-                      <RefreshCw
-                        className="animate-spin text-slate-400"
-                        size={28}
-                      />
-                      <p>Loading customers...</p>
-                    </div>
-                  </td>
-                </tr>
-              ) : error ? (
-                <tr>
-                  <td
-                    colSpan={5}
-                    className="px-6 py-12 text-center text-red-600"
-                  >
-                    {error}
-                  </td>
-                </tr>
-              ) : customers.length === 0 ? (
-                <tr>
-                  <td
-                    colSpan={5}
-                    className="px-6 py-12 text-center text-slate-500"
-                  >
-                    {debouncedSearch
-                      ? "No customers match your search and selected filter."
-                      : status === "deactivated"
-                        ? "No deactivated customers found."
-                        : status === "active"
-                          ? "No active customers found."
-                          : "No customers found."}
-                  </td>
-                </tr>
-              ) : (
-                customers.map((customer) => (
+              <tbody className="divide-y divide-[#F0ECE5]">
+                {customers.map((customer) => (
                   <tr
                     key={customer.id}
-                    className="transition hover:bg-slate-50/70"
+                    className="transition-colors hover:bg-[#FCFAF6]"
                   >
-                    <td className="px-6 py-4">
-                      <p className="font-medium text-slate-900">
+                    <td className="px-5 py-4">
+                      <p className="font-medium text-[#1C1C1C]">
                         {customer.full_name}
                       </p>
-                      <p className="text-slate-500">{customer.email}</p>
+
+                      <p className="mt-1 text-sm text-[#8A8176]">
+                        {customer.email}
+                      </p>
                     </td>
 
-                    <td className="px-6 py-4 text-slate-600">
-                      {new Date(customer.created_at).toLocaleDateString()}
+                    <td className="whitespace-nowrap px-5 py-4 text-[#6B6258]">
+                      {formatDate(customer.created_at)}
                     </td>
 
-                    <td className="px-6 py-4 text-slate-600">
+                    <td className="px-5 py-4 text-[#6B6258]">
                       {customer.total_orders}
                     </td>
 
-                    <td className="px-6 py-4 font-medium text-slate-900">
-                      {new Intl.NumberFormat("en-PH", {
-                        style: "currency",
-                        currency: "PHP",
-                      }).format(Number(customer.total_spent))}
+                    <td className="whitespace-nowrap px-5 py-4 font-medium text-[#1C1C1C]">
+                      {formatCurrency(customer.total_spent)}
                     </td>
 
-                    <td className="px-6 py-4">
+                    <td className="px-5 py-4">
+                      <span
+                        className={`inline-flex rounded-full px-2.5 py-1 text-xs font-medium ${
+                          customer.is_active
+                            ? "bg-emerald-50 text-emerald-700"
+                            : "bg-rose-50 text-rose-700"
+                        }`}
+                      >
+                        {customer.is_active ? "Active" : "Deactivated"}
+                      </span>
+                    </td>
+
+                    <td className="px-5 py-4 text-right">
                       <button
                         type="button"
                         onClick={() => setSelectedCustomer(customer)}
                         title="View customer details"
-                        aria-label="View customer details"
-                        className="rounded-lg p-2 text-slate-500 transition hover:bg-slate-100 hover:text-slate-900"
+                        aria-label={`View details for ${customer.full_name}`}
+                        className="rounded-lg p-2 text-[#6B6258] transition hover:bg-[#F2EEE7] hover:text-[#B3261E]"
                       >
                         <Eye size={18} />
                       </button>
                     </td>
                   </tr>
-                ))
-              )}
-            </tbody>
-          </table>
+                ))}
+              </tbody>
+            </table>
+          )}
+        </div>
+
+        {/* Mobile Customer Cards */}
+        <div className="divide-y divide-[#F0ECE5] md:hidden">
+          {isLoading && customers.length === 0
+            ? renderLoadingState()
+            : error
+              ? renderErrorState()
+              : customers.length === 0
+                ? renderEmptyState()
+                : customers.map((customer) => (
+                    <div key={customer.id} className="space-y-4 p-4">
+                      {/* Customer Identity */}
+                      <div className="flex items-start justify-between gap-3">
+                        <div className="min-w-0">
+                          <p className="break-words font-semibold text-[#1C1C1C]">
+                            {customer.full_name}
+                          </p>
+
+                          <p className="mt-1 break-all text-sm text-[#8A8176]">
+                            {customer.email}
+                          </p>
+                        </div>
+
+                        <span
+                          className={`shrink-0 rounded-full px-2.5 py-1 text-xs font-medium ${
+                            customer.is_active
+                              ? "bg-emerald-50 text-emerald-700"
+                              : "bg-rose-50 text-rose-700"
+                          }`}
+                        >
+                          {customer.is_active ? "Active" : "Deactivated"}
+                        </span>
+                      </div>
+
+                      {/* Customer Information */}
+                      <div className="grid grid-cols-2 gap-4">
+                        <div>
+                          <p className="text-xs text-[#A1988D]">Registered</p>
+
+                          <p className="mt-1 text-sm text-[#514940]">
+                            {formatDate(customer.created_at)}
+                          </p>
+                        </div>
+
+                        <div>
+                          <p className="text-xs text-[#A1988D]">Total Orders</p>
+
+                          <p className="mt-1 text-sm text-[#514940]">
+                            {customer.total_orders}
+                          </p>
+                        </div>
+
+                        <div className="col-span-2">
+                          <p className="text-xs text-[#A1988D]">Total Spent</p>
+
+                          <p className="mt-1 text-base font-semibold text-[#1C1C1C]">
+                            {formatCurrency(customer.total_spent)}
+                          </p>
+                        </div>
+                      </div>
+
+                      {/* View Details */}
+                      <div className="flex justify-end border-t border-[#F0ECE5] pt-3">
+                        <button
+                          type="button"
+                          onClick={() => setSelectedCustomer(customer)}
+                          className="inline-flex items-center gap-2 rounded-lg border border-[#E4DCCE] bg-white px-3 py-2 text-sm font-medium text-[#514940] transition hover:bg-[#F8F5EF] hover:text-[#B3261E]"
+                        >
+                          <Eye size={16} />
+                          View Details
+                        </button>
+                      </div>
+                    </div>
+                  ))}
         </div>
 
         {/* Pagination */}
-        <div className="border-t border-slate-200 px-6 py-4">
+        <div className="border-t border-[#EAE4DA] px-4 py-3">
           <Pagination
             currentPage={currentPage}
             totalPages={pagination.totalPages}
@@ -292,6 +414,7 @@ const CustomersPage = () => {
         </div>
       </div>
 
+      {/* Customer Details Modal */}
       <CustomerDetailsModal
         customerId={selectedCustomer?.id}
         open={Boolean(selectedCustomer)}

@@ -26,6 +26,14 @@ const protect = async (req, res, next) => {
     });
 
     // 4. Retrieve current user from database
+
+    if (typeof decoded.userId !== "string" || !decoded.userId) {
+      return res.status(401).json({
+        status: "error",
+        message: "Not authorized. Invalid token payload.",
+      });
+    }
+
     const result = await pool.query(
       `
         SELECT

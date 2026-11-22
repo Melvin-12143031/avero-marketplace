@@ -130,12 +130,15 @@ const getLowStockProducts = async () => {
 const getProductById = async (productId) => {
   const result = await pool.query(
     `
-        SELECT *
+        SELECT
+            products.*,
+            categories.name AS category
         FROM products
-        WHERE id = $1
-        AND is_active = TRUE
-
-        `,
+        LEFT JOIN categories
+            ON products.category_id = categories.id
+        WHERE products.id = $1
+        AND products.is_active = TRUE
+    `,
     [productId],
   );
 

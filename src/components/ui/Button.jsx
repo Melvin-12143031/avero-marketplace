@@ -2,13 +2,13 @@ import { Button as ButtonPrimitive } from "@base-ui/react/button";
 import { cn } from "cn";
 import { buttonVariants } from "./button-variants";
 
-function Button({
+const Button = ({
   className,
   variant = "default",
   size = "default",
   fullWidth = false,
   ...props
-}) {
+}) => {
   return (
     <ButtonPrimitive
       data-slot="button"
@@ -19,7 +19,7 @@ function Button({
       {...props}
     />
   );
-}
+};
 
 export { Button };
 export default Button;

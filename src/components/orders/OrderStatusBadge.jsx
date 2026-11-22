@@ -1,25 +1,28 @@
 const OrderStatusBadge = ({ status }) => {
-    const statusStyles = {
-        pending: 'bg-amber-100 text-amber-700',
-        processing: 'bg-blue-100 text-blue-700',
-        shipped: 'bg-indigo-100 text-indigo-700',
-        delivered: 'bg-green-100 text-green-700',
-        cancelled: 'bg-red-100 text-red-700',
-        paid: 'bg-green-100 text-green-700',
-        unpaid: 'bg-amber-100 text-amber-700',
-        failed: 'bg-red-100 text-red-700',
-    }
+  const statusStyles = {
+    pending: "bg-[#F5EBD8] text-[#946B2D]",
+    processing: "bg-[#EDE6D8] text-[#6B6258]",
+    shipped: "bg-[#E9E5DF] text-[#62594F]",
+    delivered: "bg-[#E5EDE5] text-[#496B50]",
+    cancelled: "bg-[#F5E5E2] text-[#A33B32]",
+    paid: "bg-[#E5EDE5] text-[#496B50]",
+    unpaid: "bg-[#F5EBD8] text-[#946B2D]",
+    failed: "bg-[#F5E5E2] text-[#A33B32]",
+    refunded: "bg-[#EEE8F2] text-[#71577D]",
+  };
 
-    const styles = statusStyles[status?.toLowerCase()] ||
-        'bg-slate-100 text-slate-700'
+  const normalizedStatus = status?.trim().toLowerCase();
 
-    return (
-        <span
-            className={`rounded-full px-3 py-1 text-sm font-medium capitalize ${styles}`}
-        >
-            {status?.trim() || 'Unknown'}
-        </span>
-    )
-}
+  const styles =
+    statusStyles[normalizedStatus] || "bg-[#F0EDE8] text-[#6B6258]";
 
-export default OrderStatusBadge
+  return (
+    <span
+      className={`inline-flex items-center rounded-full px-3 py-1 text-xs font-semibold capitalize ${styles}`}
+    >
+      {normalizedStatus || "Unknown"}
+    </span>
+  );
+};
+
+export default OrderStatusBadge;

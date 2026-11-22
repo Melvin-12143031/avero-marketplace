@@ -15,6 +15,8 @@ import authRoutes from "./routes/authRoutes.js";
 import inventoryRoutes from "./routes/inventoryRoutes.js";
 import dashboardRoutes from "./routes/dashboardRoutes.js";
 import customerRoutes from "./routes/customerRoutes.js";
+import cartRoutes from "./routes/cartRoutes.js";
+import contactRoutes from "./routes/contactRoutes.js";
 
 validateEnv();
 
@@ -58,6 +60,8 @@ app.use("/api/auth", authRoutes);
 app.use("/api/inventory", inventoryRoutes);
 app.use("/api/dashboard", dashboardRoutes);
 app.use("/api/customers", customerRoutes);
+app.use("/api/cart", cartRoutes);
+app.use("/api/contact", contactRoutes);
 
 // Health Check Route
 app.get("/api/health", (req, res) => {

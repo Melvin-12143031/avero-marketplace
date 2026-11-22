@@ -1,17 +1,16 @@
-
-import { Search, X } from 'lucide-react'
+import { Search, X } from "lucide-react";
 
 const SearchInput = ({
   value,
   onChange,
-  placeholder = 'Search products...',
+  placeholder = "Search products...",
   clearable = true,
 }) => {
   return (
     <div className="relative w-full max-w-md">
       <Search
         size={18}
-        className="pointer-events-none absolute left-3 top-1/2 -translate-y-1/2 text-slate-400"
+        className="pointer-events-none absolute left-4 top-1/2 -translate-y-1/2 text-[#8A8176]"
       />
 
       <input
@@ -20,25 +19,23 @@ const SearchInput = ({
         onChange={(event) => onChange(event.target.value)}
         placeholder={placeholder}
         aria-label={placeholder}
-        className={`w-full rounded-lg border border-slate-300 bg-white py-2.5 pl-10 text-sm text-slate-900 outline-none transition focus:border-indigo-500 focus:ring-2 focus:ring-indigo-100 ${clearable ? 'pr-10' : 'pr-4'
-          }`}
+        className={`w-full rounded-sm border border-[#E4DCCE] bg-white py-3 pl-11 text-sm text-[#1C1C1C] outline-none transition placeholder:text-[#A49A8D] focus:border-[#B3261E] focus:ring-2 focus:ring-[#B3261E]/10 ${
+          clearable ? "pr-11" : "pr-4"
+        }`}
       />
 
       {clearable && value && (
         <button
           type="button"
-          onClick={() => onChange('')}
+          onClick={() => onChange("")}
           aria-label="Clear search"
-          className="absolute right-3 top-1/2 -translate-y-1/2 text-slate-400 transition hover:text-slate-700"
+          className="absolute right-4 top-1/2 -translate-y-1/2 text-[#8A8176] transition hover:text-[#B3261E] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[#D78B7F] focus-visible:ring-offset-2 rounded-sm"
         >
           <X size={18} />
         </button>
       )}
-
     </div>
+  );
+};
 
-
-  )
-}
-
-export default SearchInput
+export default SearchInput;

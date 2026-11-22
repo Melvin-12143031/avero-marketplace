@@ -1,23 +1,51 @@
 import { useEffect, useState } from "react";
 import { getProducts, getCategories } from "../../services/api";
 
-const useProductCatalog = () => {
+const useProductCatalog = (initialCategory = "All") => {
   const [products, setProducts] = useState([]);
   const [categories, setCategories] = useState(["All"]);
 
+  const [isLoading, setIsLoading] = useState(true);
+  const [error, setError] = useState("");
+
   const [searchTerm, setSearchTerm] = useState("");
-  const [selectedCategory, setSelectedCategory] = useState("All");
+  const [selectedCategory, setSelectedCategory] = useState(initialCategory);
   const [sortBy, setSortBy] = useState("featured");
+
+  const [currentPage, setCurrentPage] = useState(1);
+  const pageSize = 9;
+
+  const handleSearchChange = (value) => {
+    setSearchTerm(value);
+    setCurrentPage(1);
+  };
+
+  const handleCategoryChange = (category) => {
+    setSelectedCategory(category);
+    setCurrentPage(1);
+  };
+
+  const handleSortChange = (value) => {
+    setSortBy(value);
+    setCurrentPage(1);
+  };
 
   useEffect(() => {
     const loadProducts = async () => {
+      setIsLoading(true);
+      setError("");
+
       try {
         const data = await getProducts();
         setProducts(data);
       } catch (error) {
         console.error("Error loading products:", error.message);
+        setError("Unable to load products. Please try again.");
+      } finally {
+        setIsLoading(false);
       }
     };
+
     loadProducts();
   }, []);
 
@@ -25,12 +53,12 @@ const useProductCatalog = () => {
     const loadCategories = async () => {
       try {
         const data = await getCategories();
-
         setCategories(["All", ...data.map((category) => category.name)]);
       } catch (error) {
         console.error("Error loading categories:", error.message);
       }
     };
+
     loadCategories();
   }, []);
 
@@ -67,16 +95,31 @@ const useProductCatalog = () => {
     }
   });
 
+  const totalItems = sortedProducts.length;
+  const totalPages = Math.ceil(totalItems / pageSize);
+
+  const paginatedProducts = sortedProducts.slice(
+    (currentPage - 1) * pageSize,
+    currentPage * pageSize,
+  );
+
   return {
-    products: sortedProducts,
+    allProducts: products,
+    setSearchTerm: handleSearchChange,
+    setSelectedCategory: handleCategoryChange,
+    setSortBy: handleSortChange,
+    products: paginatedProducts,
+    totalItems,
+    totalPages,
+    currentPage,
+    pageSize,
+    setCurrentPage,
     categories,
     searchTerm,
-    setSearchTerm,
     selectedCategory,
-    setSelectedCategory,
     sortBy,
-    setSortBy,
+    isLoading,
+    error,
   };
 };
-
 export default useProductCatalog;

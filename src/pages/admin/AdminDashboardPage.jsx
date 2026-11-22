@@ -33,6 +33,59 @@ import {
 import { formatPrice, getAdminOrders } from "../../services/orderService";
 import DashboardStatCard from "@/components/ui/admin/DashboardStatCard";
 
+const orderStatusColors = [
+  "#C58A2B",
+  "#55758A",
+  "#8B7296",
+  "#4F8065",
+  "#B85C52",
+];
+
+const paymentStatusStyles = {
+  pending: "bg-amber-100 text-amber-800",
+  paid: "bg-green-100 text-green-800",
+  failed: "bg-red-100 text-red-800",
+  refunded: "bg-purple-100 text-purple-800",
+  cancelled: "bg-stone-100 text-stone-700",
+};
+
+const orderStatusStyles = {
+  pending: "bg-amber-100 text-amber-800",
+  processing: "bg-blue-100 text-blue-800",
+  shipped: "bg-purple-100 text-purple-800",
+  delivered: "bg-green-100 text-green-800",
+  cancelled: "bg-red-100 text-red-800",
+};
+
+const getStatusClass = (styles, status) =>
+  styles[status] || "bg-stone-100 text-stone-700";
+
+const formatOrderDate = (date) =>
+  new Date(date).toLocaleDateString("en-PH", {
+    year: "numeric",
+    month: "short",
+    day: "numeric",
+  });
+
+const chartGridProps = {
+  stroke: "#E4DCCE",
+  strokeDasharray: "3 3",
+  vertical: false,
+};
+
+const chartTooltipStyle = {
+  contentStyle: {
+    backgroundColor: "#FFFFFF",
+    border: "1px solid #E4DCCE",
+    borderRadius: "10px",
+    padding: "10px 14px",
+  },
+  labelStyle: {
+    color: "#1C1C1C",
+    fontWeight: 600,
+  },
+};
+
 const AdminDashboardPage = () => {
   const [statistics, setStatistics] = useState(null);
   const [isLoading, setIsLoading] = useState(true);
@@ -76,13 +129,14 @@ const AdminDashboardPage = () => {
         setIsRecentOrdersLoading(false);
       }
     };
+
     fetchRecentOrders();
   }, []);
 
   if (isLoading) {
     return (
       <main className="mx-auto max-w-7xl px-6 py-8">
-        <p>Loading dashboard statistics...</p>
+        <p className="text-muted-foreground">Loading dashboard statistics...</p>
       </main>
     );
   }
@@ -90,7 +144,7 @@ const AdminDashboardPage = () => {
   if (error) {
     return (
       <main className="mx-auto max-w-7xl px-6 py-8">
-        <p className="text-red-600">{error}</p>
+        <p className="text-sm text-red-600">{error}</p>
       </main>
     );
   }
@@ -114,22 +168,17 @@ const AdminDashboardPage = () => {
     { name: "Cancelled", value: Number(statistics.orders.cancelled_orders) },
   ];
 
-  const orderStatusColors = [
-    "#f59e0b",
-    "#3b82f6",
-    "#8b5cf6",
-    "#22c55e",
-    "#ef4444",
-  ];
-
   return (
     <main className="mx-auto max-w-7xl px-6 py-8">
-      <h1 className="text-2xl font-bold text-slate-900">Admin Dashboard</h1>
+      <h1 className="text-2xl font-bold tracking-tight text-foreground">
+        Admin Dashboard
+      </h1>
 
-      <p className="mt-2 text-slate-600">
+      <p className="mt-2 text-muted-foreground">
         Welcome to your marketplace administration panel.
       </p>
 
+      {/* Main Statistics */}
       <div className="mt-8 grid gap-4 sm:grid-cols-2 lg:grid-cols-4">
         <DashboardStatCard
           title="Total Revenue"
@@ -162,7 +211,7 @@ const AdminDashboardPage = () => {
 
       {/* Customer Segmentation */}
       <div className="mt-10">
-        <h2 className="text-lg font-semibold text-slate-900">
+        <h2 className="text-lg font-semibold text-foreground">
           Customer Segmentation
         </h2>
 
@@ -197,8 +246,9 @@ const AdminDashboardPage = () => {
         </div>
       </div>
 
+      {/* Inventory Overview */}
       <div className="mt-10">
-        <h2 className="text-lg font-semibold text-slate-900">
+        <h2 className="text-lg font-semibold text-foreground">
           Inventory Overview
         </h2>
 
@@ -226,14 +276,14 @@ const AdminDashboardPage = () => {
         </div>
       </div>
 
+      {/* Order Status Overview */}
       <div className="mt-10">
-        <h2 className="text-lg font-semibold text-slate-900">
+        <h2 className="text-lg font-semibold text-foreground">
           Order Status Overview
         </h2>
 
-        <div className="mt-4 rounded-xl border bg-white p-6">
+        <div className="mt-4 rounded-xl border border-border/80 bg-white p-6 shadow-sm">
           <div className="grid items-center gap-8 md:grid-cols-2">
-            {/* Donut Chart */}
             <div className="relative h-80">
               <ResponsiveContainer width="100%" height="100%">
                 <PieChart>
@@ -251,21 +301,24 @@ const AdminDashboardPage = () => {
                     ))}
                   </Pie>
 
-                  <Tooltip formatter={(value, name) => [value, name]} />
+                  <Tooltip
+                    {...chartTooltipStyle}
+                    formatter={(value, name) => [value, name]}
+                  />
                 </PieChart>
               </ResponsiveContainer>
 
               <div className="pointer-events-none absolute inset-0 flex flex-col items-center justify-center">
-                <span className="text-3xl font-bold text-slate-900">
+                <span className="text-3xl font-bold tracking-tight text-foreground tabular-nums">
                   {statistics.orders.total_orders}
                 </span>
+
                 <span className="text-sm text-muted-foreground">
                   Total Orders
                 </span>
               </div>
             </div>
 
-            {/* Custom Legend */}
             <div className="space-y-5">
               {orderStatusData.map((item, index) => (
                 <div
@@ -274,18 +327,18 @@ const AdminDashboardPage = () => {
                 >
                   <div className="flex items-center gap-3">
                     <span
-                      className="h-3 w-3 rounded-full"
+                      className="size-3 rounded-full"
                       style={{
                         backgroundColor: orderStatusColors[index],
                       }}
                     />
 
-                    <span className="text-sm font-medium text-slate-700">
+                    <span className="text-sm font-medium text-foreground">
                       {item.name}
                     </span>
                   </div>
 
-                  <span className="font-semibold text-slate-900">
+                  <span className="font-semibold text-foreground tabular-nums">
                     {item.value}
                   </span>
                 </div>
@@ -295,12 +348,13 @@ const AdminDashboardPage = () => {
         </div>
       </div>
 
+      {/* Monthly Revenue */}
       <div className="mt-10">
-        <h2 className="text-lg font-semibold text-slate-900">
+        <h2 className="text-lg font-semibold text-foreground">
           Monthly Revenue
         </h2>
 
-        <div className="mt-4 rounded-xl border bg-white p-6">
+        <div className="mt-4 rounded-xl border border-border/80 bg-white p-6 shadow-sm">
           <div className="h-80">
             <ResponsiveContainer width="100%" height="100%">
               <AreaChart data={monthlyRevenue}>
@@ -312,22 +366,31 @@ const AdminDashboardPage = () => {
                     x2="0"
                     y2="1"
                   >
-                    <stop offset="5%" stopColor="#6366f1" stopOpacity={0.3} />
-                    <stop offset="95%" stopColor="#6366f1" stopOpacity={0} />
+                    <stop offset="5%" stopColor="#B3261E" stopOpacity={0.25} />
+                    <stop offset="95%" stopColor="#B3261E" stopOpacity={0} />
                   </linearGradient>
                 </defs>
 
-                <CartesianGrid strokeDasharray="3 3" vertical={false} />
+                <CartesianGrid {...chartGridProps} />
 
-                <XAxis dataKey="month" />
+                <XAxis
+                  dataKey="month"
+                  tick={{ fill: "#6B6258", fontSize: 12 }}
+                  axisLine={{ stroke: "#E4DCCE" }}
+                  tickLine={false}
+                />
 
                 <YAxis
                   tickFormatter={(value) =>
                     `PHP ${value.toLocaleString("en-PH")}`
                   }
+                  tick={{ fill: "#6B6258", fontSize: 12 }}
+                  axisLine={false}
+                  tickLine={false}
                 />
 
                 <Tooltip
+                  {...chartTooltipStyle}
                   formatter={(value) => [formatPrice(value), "Revenue"]}
                 />
 
@@ -335,9 +398,10 @@ const AdminDashboardPage = () => {
                   type="monotone"
                   dataKey="revenue"
                   name="Revenue"
-                  stroke="#6366f1"
-                  strokeWidth={3}
+                  stroke="#B3261E"
+                  strokeWidth={2.5}
                   fill="url(#revenueGradient)"
+                  activeDot={{ r: 6, fill: "#B3261E" }}
                 />
               </AreaChart>
             </ResponsiveContainer>
@@ -345,29 +409,45 @@ const AdminDashboardPage = () => {
         </div>
       </div>
 
+      {/* Monthly Orders */}
       <div className="mt-10">
-        <h2 className="text-lg font-semibold text-slate-900">Monthly Orders</h2>
+        <h2 className="text-lg font-semibold text-foreground">
+          Monthly Orders
+        </h2>
 
-        <div className="mt-4 rounded-xl border bg-white p-6">
+        <div className="mt-4 rounded-xl border border-border/80 bg-white p-6 shadow-sm">
           <div className="h-80">
             <ResponsiveContainer width="100%" height="100%">
               <LineChart data={monthlyRevenue}>
-                <CartesianGrid strokeDasharray="3 3" vertical={false} />
+                <CartesianGrid {...chartGridProps} />
 
-                <XAxis dataKey="month" />
+                <XAxis
+                  dataKey="month"
+                  tick={{ fill: "#6B6258", fontSize: 12 }}
+                  axisLine={{ stroke: "#E4DCCE" }}
+                  tickLine={false}
+                />
 
-                <YAxis allowDecimals={false} />
+                <YAxis
+                  allowDecimals={false}
+                  tick={{ fill: "#6B6258", fontSize: 12 }}
+                  axisLine={false}
+                  tickLine={false}
+                />
 
-                <Tooltip formatter={(value) => [value, "Orders"]} />
+                <Tooltip
+                  {...chartTooltipStyle}
+                  formatter={(value) => [value, "Orders"]}
+                />
 
                 <Line
                   type="monotone"
                   dataKey="orderCount"
                   name="Orders"
-                  stroke="#0ea5e9"
-                  strokeWidth={3}
-                  dot={{ r: 5 }}
-                  activeDot={{ r: 7 }}
+                  stroke="#6B6258"
+                  strokeWidth={2.5}
+                  dot={{ r: 4, fill: "#6B6258" }}
+                  activeDot={{ r: 6, fill: "#B3261E" }}
                 />
               </LineChart>
             </ResponsiveContainer>
@@ -375,10 +455,11 @@ const AdminDashboardPage = () => {
         </div>
       </div>
 
+      {/* Recent Orders */}
       <div className="mt-10">
-        <h2 className="text-lg font-semibold text-slate-900">Recent Orders</h2>
+        <h2 className="text-lg font-semibold text-foreground">Recent Orders</h2>
 
-        <div className="mt-4 overflow-x-auto rounded-xl border bg-white">
+        <div className="mt-4 overflow-hidden rounded-xl border border-border/80 bg-white shadow-sm">
           {isRecentOrdersLoading ? (
             <p className="p-6 text-sm text-muted-foreground">
               Loading recent orders...
@@ -390,83 +471,151 @@ const AdminDashboardPage = () => {
               No orders found.
             </p>
           ) : (
-            <table className="w-full text-sm">
-              <thead className="border-b bg-slate-50">
-                <tr className="text-left text-slate-600">
-                  <th className="px-6 py-4 font-medium">Order Number</th>
-                  <th className="px-6 py-4 font-medium">Customer</th>
-                  <th className="px-6 py-4 font-medium">Date</th>
-                  <th className="px-6 py-4 font-medium">Total</th>
-                  <th className="px-6 py-4 font-medium">Payment</th>
-                  <th className="px-6 py-4 font-medium">Status</th>
-                </tr>
-              </thead>
+            <>
+              {/* Desktop Table */}
+              <div className="hidden overflow-x-auto md:block">
+                <table className="w-full min-w-[850px] text-sm">
+                  <thead className="border-b border-border bg-secondary/50">
+                    <tr className="text-left text-muted-foreground">
+                      <th className="px-6 py-4 font-medium">Order Number</th>
+                      <th className="px-6 py-4 font-medium">Customer</th>
+                      <th className="px-6 py-4 font-medium">Date</th>
+                      <th className="px-6 py-4 font-medium">Total</th>
+                      <th className="px-6 py-4 font-medium">Payment</th>
+                      <th className="px-6 py-4 font-medium">Status</th>
+                    </tr>
+                  </thead>
 
-              <tbody className="divide-y">
-                {recentOrders.map((order) => (
-                  <tr key={order.id} className="hover:bg-slate-50">
-                    <td className="whitespace-nowrap px-6 py-4 font-medium">
-                      {order.order_number}
-                    </td>
-
-                    <td className="px-6 py-4">
-                      <div className="font-medium text-slate-900">
-                        {order.shipping_address?.customer?.fullName ||
-                          "Unknown Customer"}
-                      </div>
-                      <div className="text-xs text-muted-foreground">
-                        {order.shipping_address?.customer?.email || ""}
-                      </div>
-                    </td>
-
-                    <td className="whitespace-nowrap px-6 py-4">
-                      {new Date(order.created_at).toLocaleDateString("en-PH", {
-                        year: "numeric",
-                        month: "short",
-                        day: "numeric",
-                      })}
-                    </td>
-
-                    <td className="whitespace-nowrap px-6 py-4">
-                      {formatPrice(order.total)}
-                    </td>
-
-                    <td className="px-6 py-4">
-                      <span
-                        className={`rounded-full px-3 py-1 text-xs font-medium capitalize ${
-                          {
-                            unpaid: "bg-amber-100 text-amber-700",
-                            paid: "bg-green-100 text-green-700",
-                            failed: "bg-red-100 text-red-700",
-                            refunded: "bg-violet-100 text-violet-700",
-                            cancelled: "bg-slate-100 text-slate-700",
-                          }[order.payment_status] ||
-                          "bg-slate-100 text-slate-700"
-                        }`}
+                  <tbody className="divide-y divide-border">
+                    {recentOrders.map((order) => (
+                      <tr
+                        key={order.id}
+                        className="transition-colors hover:bg-secondary/30"
                       >
-                        {order.payment_status}
-                      </span>
-                    </td>
+                        <td className="whitespace-nowrap px-6 py-4 font-medium text-foreground">
+                          {order.order_number}
+                        </td>
 
-                    <td className="px-6 py-4">
+                        <td className="px-6 py-4">
+                          <div className="font-medium text-foreground">
+                            {order.shipping_address?.customer?.fullName ||
+                              "Unknown Customer"}
+                          </div>
+
+                          <div className="text-xs text-muted-foreground">
+                            {order.shipping_address?.customer?.email || ""}
+                          </div>
+                        </td>
+
+                        <td className="whitespace-nowrap px-6 py-4 text-muted-foreground">
+                          {formatOrderDate(order.created_at)}
+                        </td>
+
+                        <td className="whitespace-nowrap px-6 py-4 font-medium text-foreground">
+                          {formatPrice(order.total)}
+                        </td>
+
+                        <td className="px-6 py-4">
+                          <span
+                            className={`inline-flex rounded-full px-3 py-1 text-xs font-medium capitalize ${getStatusClass(
+                              paymentStatusStyles,
+                              order.payment_status,
+                            )}`}
+                          >
+                            {order.payment_status}
+                          </span>
+                        </td>
+
+                        <td className="px-6 py-4">
+                          <span
+                            className={`inline-flex rounded-full px-3 py-1 text-xs font-medium capitalize ${getStatusClass(
+                              orderStatusStyles,
+                              order.status,
+                            )}`}
+                          >
+                            {order.status}
+                          </span>
+                        </td>
+                      </tr>
+                    ))}
+                  </tbody>
+                </table>
+              </div>
+
+              {/* Mobile Cards */}
+              <div className="divide-y divide-border md:hidden">
+                {recentOrders.map((order) => (
+                  <div key={order.id} className="space-y-4 p-4">
+                    <div className="flex items-start justify-between gap-3">
+                      <div className="min-w-0">
+                        <p className="text-xs text-muted-foreground">
+                          Order Number
+                        </p>
+
+                        <p className="mt-1 break-all text-sm font-semibold text-foreground">
+                          {order.order_number}
+                        </p>
+                      </div>
+
                       <span
-                        className={`rounded-full px-3 py-1 text-xs font-medium capitalize ${
-                          {
-                            pending: "bg-amber-100 text-amber-700",
-                            processing: "bg-blue-100 text-blue-700",
-                            shipped: "bg-violet-100 text-violet-700",
-                            delivered: "bg-green-100 text-green-700",
-                            cancelled: "bg-red-100 text-red-700",
-                          }[order.status] || "bg-slate-100 text-slate-700"
-                        }`}
+                        className={`shrink-0 rounded-full px-3 py-1 text-xs font-medium capitalize ${getStatusClass(
+                          orderStatusStyles,
+                          order.status,
+                        )}`}
                       >
                         {order.status}
                       </span>
-                    </td>
-                  </tr>
+                    </div>
+
+                    <div>
+                      <p className="text-xs text-muted-foreground">Customer</p>
+
+                      <p className="mt-1 text-sm font-medium text-foreground">
+                        {order.shipping_address?.customer?.fullName ||
+                          "Unknown Customer"}
+                      </p>
+
+                      <p className="break-all text-xs text-muted-foreground">
+                        {order.shipping_address?.customer?.email || ""}
+                      </p>
+                    </div>
+
+                    <div className="grid grid-cols-2 gap-4">
+                      <div>
+                        <p className="text-xs text-muted-foreground">Date</p>
+
+                        <p className="mt-1 text-sm text-foreground">
+                          {formatOrderDate(order.created_at)}
+                        </p>
+                      </div>
+
+                      <div>
+                        <p className="text-xs text-muted-foreground">Total</p>
+
+                        <p className="mt-1 text-sm font-semibold text-foreground">
+                          {formatPrice(order.total)}
+                        </p>
+                      </div>
+                    </div>
+
+                    <div>
+                      <p className="mb-2 text-xs text-muted-foreground">
+                        Payment Status
+                      </p>
+
+                      <span
+                        className={`inline-flex rounded-full px-3 py-1 text-xs font-medium capitalize ${getStatusClass(
+                          paymentStatusStyles,
+                          order.payment_status,
+                        )}`}
+                      >
+                        {order.payment_status}
+                      </span>
+                    </div>
+                  </div>
                 ))}
-              </tbody>
-            </table>
+              </div>
+            </>
           )}
         </div>
       </div>

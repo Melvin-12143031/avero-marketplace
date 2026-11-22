@@ -1,6 +1,8 @@
 import { useState } from "react";
 import { Link, useNavigate, useLocation } from "react-router-dom";
+import { Eye, EyeOff } from "lucide-react";
 import { toast } from "sonner";
+
 import { useAuth } from "../app/AuthContext";
 
 const LoginPage = () => {
@@ -14,6 +16,7 @@ const LoginPage = () => {
   });
 
   const [isLoading, setIsLoading] = useState(false);
+  const [showPassword, setShowPassword] = useState(false);
 
   const handleChange = (event) => {
     const { name, value } = event.target;
@@ -49,73 +52,148 @@ const LoginPage = () => {
   };
 
   return (
-    <div className="flex min-h-[80vh] items-center justify-center px-4 py-12">
-      <div className="w-full max-w-md rounded-xl bg-white p-8 shadow-sm">
-        <h1 className="mb-2 text-2xl font-bold text-slate-900">Welcome Back</h1>
+    <div className="min-h-[80vh] bg-[#FAF8F4] px-4 py-10 sm:px-6 sm:py-14">
+      <div className="mx-auto grid w-full max-w-6xl overflow-hidden rounded-xl border border-[#E4DCCE] bg-white shadow-sm lg:min-h-[620px] lg:grid-cols-2">
+        {/* Brand Panel */}
+        <section className="relative flex min-h-[260px] flex-col justify-between overflow-hidden bg-[#1C1C1C] p-8 text-white sm:min-h-[320px] sm:p-12 lg:min-h-full">
+          <img
+            src="/images/avero-hero.jpg"
+            alt=""
+            aria-hidden="true"
+            className="absolute inset-0 size-full object-cover opacity-35"
+          />
 
-        <p className="mb-6 text-sm text-slate-500">
-          Sign in to your account to continue.
-        </p>
+          <div className="absolute inset-0 bg-gradient-to-br from-[#1C1C1C]/90 via-[#1C1C1C]/60 to-[#1C1C1C]/80" />
 
-        <form onSubmit={handleSubmit} className="space-y-5">
-          <div>
-            <label
-              htmlFor="email"
-              className="mb-1 block text-sm font-medium text-slate-700"
+          <div className="relative z-10">
+            <Link
+              to="/"
+              className="font-serif text-3xl font-semibold tracking-[0.18em] text-white"
             >
-              Email Address
-            </label>
+              AVÉRO
+            </Link>
 
-            <input
-              id="email"
-              type="email"
-              name="email"
-              value={formData.email}
-              onChange={handleChange}
-              required
-              className="w-full rounded-lg border border-slate-300 px-4 py-2.5 outline-none focus:border-indigo-500 focus:ring-2 focus:ring-indigo-100"
-              placeholder="you@example.com"
-            />
+            <p className="mt-3 text-[10px] font-medium uppercase tracking-[0.25em] text-[#D8CABB]">
+              Thoughtfully chosen. Beautifully lived.
+            </p>
           </div>
 
-          <div>
-            <label
-              htmlFor="password"
-              className="mb-1 block text-sm font-medium text-slate-700"
-            >
-              Password
-            </label>
+          <div className="relative z-10 mt-12 max-w-md lg:mb-8">
+            <p className="text-xs font-semibold uppercase tracking-[0.2em] text-[#D78B7F]">
+              Welcome to AVÉRO
+            </p>
 
-            <input
-              id="password"
-              type="password"
-              name="password"
-              value={formData.password}
-              onChange={handleChange}
-              required
-              className="w-full rounded-lg border border-slate-300 px-4 py-2.5 outline-none focus:border-indigo-500 focus:ring-2 focus:ring-indigo-100"
-              placeholder="Enter your password"
-            />
+            <h2 className="mt-4 font-serif text-3xl font-medium leading-tight sm:text-4xl lg:text-5xl">
+              A more thoughtful way to shop.
+            </h2>
+
+            <p className="mt-5 max-w-sm text-sm leading-7 text-white/75">
+              Discover considered essentials and everyday pieces selected to
+              bring a little more meaning to the things you choose.
+            </p>
           </div>
 
-          <button
-            type="submit"
-            disabled={isLoading}
-            className="w-full rounded-lg bg-indigo-600 px-4 py-2.5 font-medium text-white transition hover:bg-indigo-700 disabled:cursor-not-allowed disabled:opacity-60"
-          >
-            {isLoading ? "Signing in..." : "Sign In"}
-          </button>
-        </form>
+          <p className="relative z-10 mt-10 text-xs tracking-wide text-white/50">
+            A collection made for everyday living.
+          </p>
+        </section>
 
-        <p className="mt-6 text-center text-sm text-slate-600">
-          Don't have an account?{" "}
-          <Link
-            to="/register"
-            className="font-medium text-indigo-600 hover:text-indigo-700"
-          >
-            Create one
-          </Link>
-        </p>
+        {/* Login Form */}
+        <section className="flex items-center justify-center px-6 py-12 sm:px-12 lg:px-16">
+          <div className="w-full max-w-md">
+            <div>
+              <p className="text-xs font-semibold uppercase tracking-[0.2em] text-[#B3261E]">
+                Your Account
+              </p>
+
+              <h1 className="mt-3 font-serif text-3xl font-medium text-[#1C1C1C] sm:text-4xl">
+                Welcome back.
+              </h1>
+
+              <p className="mt-3 text-sm leading-7 text-[#6B6258]">
+                Sign in to continue exploring your AVÉRO experience.
+              </p>
+            </div>
+
+            <form onSubmit={handleSubmit} className="mt-9 space-y-6">
+              <div>
+                <label
+                  htmlFor="email"
+                  className="mb-2 block text-sm font-medium text-[#1C1C1C]"
+                >
+                  Email Address
+                </label>
+
+                <input
+                  id="email"
+                  type="email"
+                  name="email"
+                  value={formData.email}
+                  onChange={handleChange}
+                  autoComplete="email"
+                  required
+                  placeholder="you@example.com"
+                  className="w-full rounded-md border border-[#E4DCCE] bg-white px-4 py-3 text-sm text-[#1C1C1C] outline-none transition placeholder:text-[#A49A8D] focus:border-[#B3261E] focus:ring-2 focus:ring-[#B3261E]/10"
+                />
+              </div>
+
+              <div>
+                <label
+                  htmlFor="password"
+                  className="mb-2 block text-sm font-medium text-[#1C1C1C]"
+                >
+                  Password
+                </label>
+
+                <div className="relative">
+                  <input
+                    id="password"
+                    type={showPassword ? "text" : "password"}
+                    name="password"
+                    value={formData.password}
+                    onChange={handleChange}
+                    autoComplete="current-password"
+                    required
+                    placeholder="Enter your password"
+                    className="w-full rounded-md border border-[#E4DCCE] bg-white px-4 py-3 pr-12 text-sm text-[#1C1C1C] outline-none transition placeholder:text-[#A49A8D] focus:border-[#B3261E] focus:ring-2 focus:ring-[#B3261E]/10"
+                  />
+
+                  <button
+                    type="button"
+                    onClick={() => setShowPassword((current) => !current)}
+                    aria-label={
+                      showPassword ? "Hide password" : "Show password"
+                    }
+                    aria-pressed={showPassword}
+                    className="absolute right-4 top-1/2 -translate-y-1/2 text-[#8A8176] transition hover:text-[#B3261E] focus:outline-none focus:ring-2 focus:ring-[#B3261E]/20"
+                  >
+                    {showPassword ? <EyeOff size={19} /> : <Eye size={19} />}
+                  </button>
+                </div>
+              </div>
+
+              <button
+                type="submit"
+                disabled={isLoading}
+                className="w-full rounded-md bg-[#B3261E] px-5 py-3.5 text-sm font-semibold text-white transition-colors hover:bg-[#922019] focus:outline-none focus:ring-2 focus:ring-[#B3261E] focus:ring-offset-2 disabled:cursor-not-allowed disabled:opacity-60"
+              >
+                {isLoading ? "Signing in..." : "Sign In"}
+              </button>
+            </form>
+
+            <div className="mt-8 border-t border-[#E4DCCE] pt-6 text-center">
+              <p className="text-sm text-[#6B6258]">
+                Don't have an account?{" "}
+                <Link
+                  to="/register"
+                  className="font-semibold text-[#B3261E] transition hover:text-[#922019]"
+                >
+                  Create one
+                </Link>
+              </p>
+            </div>
+          </div>
+        </section>
       </div>
     </div>
   );

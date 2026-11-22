@@ -3,6 +3,17 @@ import { toast } from "sonner";
 import { Pencil, Power, RefreshCw } from "lucide-react";
 
 import {
+  AlertDialog,
+  AlertDialogAction,
+  AlertDialogCancel,
+  AlertDialogContent,
+  AlertDialogDescription,
+  AlertDialogFooter,
+  AlertDialogHeader,
+  AlertDialogTitle,
+} from "@/components/ui/alert-dialog";
+
+import {
   getAdminProducts,
   uploadProductImage,
   createProduct,
@@ -13,6 +24,21 @@ import Button from "../../components/ui/Button";
 import { getCategories } from "../../services/categoryService";
 import Pagination from "../../components/ui/Pagination";
 import SearchInput from "../../components/ui/SearchInput";
+
+const initialFormData = {
+  name: "",
+  description: "",
+  price: "",
+  stock_quantity: "",
+  category_id: "",
+  image_url: "",
+  is_active: true,
+};
+
+const inputClassName =
+  "w-full rounded-lg border border-[#E4DCCE] bg-white px-3 py-2.5 text-sm text-[#1C1C1C] outline-none transition placeholder:text-[#A49A8D] focus:border-[#B3261E] focus:ring-2 focus:ring-[#B3261E]/10";
+
+const labelClassName = "mb-1.5 block text-sm font-medium text-[#514940]";
 
 const ProductsPage = () => {
   const [products, setProducts] = useState([]);
@@ -38,15 +64,11 @@ const ProductsPage = () => {
   const [statusFilter, setStatusFilter] = useState("all");
   const [refreshKey, setRefreshKey] = useState(0);
 
-  const [formData, setFormData] = useState({
-    name: "",
-    description: "",
-    price: "",
-    stock_quantity: "",
-    category_id: "",
-    image_url: "",
-    is_active: true,
-  });
+  const [formData, setFormData] = useState(initialFormData);
+
+  const [productToToggle, setProductToToggle] = useState(null);
+  const [isStatusDialogOpen, setIsStatusDialogOpen] = useState(false);
+  const [isStatusUpdating, setIsStatusUpdating] = useState(false);
 
   useEffect(() => {
     const timer = setTimeout(() => {
@@ -107,7 +129,7 @@ const ProductsPage = () => {
     if (!file) return;
 
     const allowedTypes = ["image/jpeg", "image/png", "image/webp"];
-    const maxFileSize = 5 * 1024 * 1024; // 5 MB
+    const maxFileSize = 5 * 1024 * 1024;
 
     if (!allowedTypes.includes(file.type)) {
       toast.error("Only JPG, PNG, and WebP images are allowed.");
@@ -154,15 +176,7 @@ const ProductsPage = () => {
 
       setProducts((prev) => [newProduct, ...prev]);
 
-      setFormData({
-        name: "",
-        description: "",
-        price: "",
-        stock_quantity: "",
-        category_id: "",
-        image_url: "",
-        is_active: true,
-      });
+      setFormData(initialFormData);
 
       toast.success("Product created successfully.");
 
@@ -175,16 +189,7 @@ const ProductsPage = () => {
   };
 
   const handleCloseCreateModal = () => {
-    setFormData({
-      name: "",
-      description: "",
-      price: "",
-      stock_quantity: "",
-      category_id: "",
-      image_url: "",
-      is_active: true,
-    });
-
+    setFormData(initialFormData);
     setImagePreview("");
     setIsCreateModalOpen(false);
   };
@@ -204,6 +209,13 @@ const ProductsPage = () => {
 
     setImagePreview(product.image_url || "");
     setIsEditModalOpen(true);
+  };
+
+  const handleCloseEditModal = () => {
+    setIsEditModalOpen(false);
+    setSelectedProduct(null);
+    setFormData(initialFormData);
+    setImagePreview("");
   };
 
   const handleUpdateProduct = async (e) => {
@@ -227,70 +239,114 @@ const ProductsPage = () => {
 
       toast.success("Product updated successfully.");
 
-      setFormData({
-        name: "",
-        description: "",
-        price: "",
-        stock_quantity: "",
-        category_id: "",
-        image_url: "",
-        is_active: true,
-      });
-
-      setImagePreview("");
-      setSelectedProduct(null);
-      setIsEditModalOpen(false);
+      handleCloseEditModal();
     } catch (error) {
       toast.error(error.message || "Failed to update product.");
     }
   };
 
-  const handleToggleProductStatus = async (product) => {
-    const nextStatus = !product.is_active;
-    const action = nextStatus ? "reactivate" : "deactivate";
+  const handleToggleProductStatus = (product) => {
+    setProductToToggle(product);
+    setIsStatusDialogOpen(true);
+  };
 
-    const confirmed = window.confirm(
-      `Are you sure you want to ${action} "${product.name}"?`,
-    );
+  const handleStatusDialogOpenChange = (open) => {
+    if (isStatusUpdating) return;
 
-    if (!confirmed) return;
+    setIsStatusDialogOpen(open);
+
+    if (!open) {
+      setProductToToggle(null);
+    }
+  };
+
+  const handleConfirmProductStatusChange = async () => {
+    if (!productToToggle || isStatusUpdating) return;
+
+    const nextStatus = !productToToggle.is_active;
 
     try {
-      await updateProductStatus(product.id, nextStatus);
+      setIsStatusUpdating(true);
+
+      await updateProductStatus(productToToggle.id, nextStatus);
 
       toast.success(
         `Product ${nextStatus ? "activated" : "deactivated"} successfully.`,
       );
 
+      setIsStatusDialogOpen(false);
+      setProductToToggle(null);
       setRefreshKey((prev) => prev + 1);
     } catch (error) {
       toast.error(error.message || "Failed to update product status.");
+    } finally {
+      setIsStatusUpdating(false);
     }
   };
 
+  const formatPrice = (price) =>
+    Number(price).toLocaleString("en-PH", {
+      minimumFractionDigits: 2,
+      maximumFractionDigits: 2,
+    });
+
+  const renderProductActions = (product) => (
+    <div className="flex items-center gap-1">
+      <Button
+        variant="secondary"
+        onClick={() => handleOpenEditProduct(product)}
+        tooltip="Edit product"
+        aria-label={`Edit ${product.name}`}
+        className="cursor-pointer rounded-lg border-0 bg-transparent px-2 py-2 text-[#6B6258] shadow-none transition hover:bg-[#EDE6D8] hover:text-[#1C1C1C]"
+      >
+        <Pencil size={16} />
+      </Button>
+
+      <Button
+        variant="secondary"
+        onClick={() => handleToggleProductStatus(product)}
+        tooltip={
+          product.is_active ? "Deactivate product" : "Reactivate product"
+        }
+        aria-label={
+          product.is_active
+            ? `Deactivate ${product.name}`
+            : `Reactivate ${product.name}`
+        }
+        className={`cursor-pointer rounded-lg border-0 bg-transparent px-2 py-2 shadow-none transition ${
+          product.is_active
+            ? "text-[#B3261E] hover:bg-[#B3261E]/10 hover:text-[#8F1E19]"
+            : "text-[#55745B] hover:bg-[#55745B]/10 hover:text-[#3E6045]"
+        }`}
+      >
+        <Power size={16} />
+      </Button>
+    </div>
+  );
+
   return (
-    <main className="mx-auto max-w-7xl px-6 py-8">
+    <main className="mx-auto max-w-7xl px-4 py-6 sm:px-6 sm:py-8">
       {/* Page Header */}
       <div className="mb-8">
-        <h1 className="text-2xl font-bold text-slate-900">
+        <h1 className="text-2xl font-semibold tracking-tight text-[#1C1C1C]">
           Product Management
         </h1>
 
-        <p className="mt-2 text-slate-600">
+        <p className="mt-2 text-sm text-[#6B6258] sm:text-base">
           Manage your marketplace products, pricing, and availability.
         </p>
       </div>
 
-      {/* Products Table */}
-      <div className="mt-8 overflow-hidden rounded-xl border border-slate-200 bg-white">
+      {/* Products Container */}
+      <div className="mt-8 overflow-hidden rounded-xl border border-[#E4DCCE] bg-white shadow-sm">
         {/* Table Header */}
-        <div className="flex flex-col gap-4 border-b border-slate-200 p-6 sm:flex-row sm:items-center sm:justify-between">
+        <div className="flex flex-col gap-4 border-b border-[#E4DCCE] bg-[#FAF8F4] p-5 sm:flex-row sm:items-center sm:justify-between sm:p-6">
           <div>
-            <h2 className="text-lg font-semibold text-slate-900">
+            <h2 className="text-lg font-semibold text-[#1C1C1C]">
               Marketplace Products
             </h2>
 
-            <p className="mt-1 text-sm text-slate-500">
+            <p className="mt-1 text-sm text-[#8A8176]">
               {pagination.totalProducts}{" "}
               {pagination.totalProducts === 1 ? "product" : "products"} found.
             </p>
@@ -309,7 +365,7 @@ const ProductsPage = () => {
                 setStatusFilter(e.target.value);
                 setCurrentPage(1);
               }}
-              className="rounded-lg border border-slate-300 bg-white px-4 py-2 text-sm text-slate-700 outline-none focus:border-indigo-500 focus:ring-2 focus:ring-indigo-100"
+              className="w-full cursor-pointer rounded-lg border border-[#E4DCCE] bg-white px-4 py-2.5 text-sm text-[#514940] outline-none transition focus:border-[#B3261E] focus:ring-2 focus:ring-[#B3261E]/10 sm:w-auto"
             >
               <option value="all">All Products</option>
               <option value="active">Active</option>
@@ -318,17 +374,17 @@ const ProductsPage = () => {
 
             <Button
               onClick={() => setIsCreateModalOpen(true)}
-              className="shrink-0 whitespace-nowrap"
+              className="shrink-0 whitespace-nowrap rounded-md bg-[#B3261E] px-4 py-2.5 font-medium text-white shadow-none transition hover:bg-[#941F19] focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-[#B3261E]"
             >
               Add Product
             </Button>
           </div>
         </div>
 
-        {/* Products Table */}
-        <div className="overflow-x-auto">
+        {/* Desktop Product Table */}
+        <div className="hidden overflow-x-auto md:block">
           <table className="w-full text-left text-sm">
-            <thead className="bg-slate-50 text-slate-600">
+            <thead className="bg-[#F5F1E9] text-[#6B6258]">
               <tr>
                 <th className="px-6 py-4 font-medium">Product</th>
                 <th className="px-6 py-4 font-medium">Category</th>
@@ -339,16 +395,16 @@ const ProductsPage = () => {
               </tr>
             </thead>
 
-            <tbody className="divide-y divide-slate-200">
+            <tbody className="divide-y divide-[#EEE8DD]">
               {isLoading && products.length === 0 ? (
                 <tr>
                   <td
                     colSpan={6}
-                    className="px-6 py-16 text-center text-slate-500"
+                    className="px-6 py-16 text-center text-[#8A8176]"
                   >
                     <div className="flex flex-col items-center gap-3">
                       <RefreshCw
-                        className="animate-spin text-slate-400"
+                        className="animate-spin text-[#B3261E]"
                         size={28}
                       />
                       <p>Loading products...</p>
@@ -359,7 +415,7 @@ const ProductsPage = () => {
                 <tr>
                   <td
                     colSpan={6}
-                    className="px-6 py-12 text-center text-slate-500"
+                    className="px-6 py-12 text-center text-[#8A8176]"
                   >
                     {debouncedSearch
                       ? "No products match your search."
@@ -370,36 +426,32 @@ const ProductsPage = () => {
                 products.map((product) => (
                   <tr
                     key={product.id}
-                    className="transition hover:bg-slate-50/70"
+                    className="transition-colors hover:bg-[#FAF8F4]"
                   >
-                    <td className="px-6 py-4 font-medium text-slate-900">
+                    <td className="px-6 py-4 font-medium text-[#1C1C1C]">
                       {product.name}
                     </td>
 
-                    <td className="px-6 py-4 text-slate-600">
+                    <td className="px-6 py-4 text-[#6B6258]">
                       {product.category_name ||
                         product.category ||
                         "Uncategorized"}
                     </td>
 
-                    <td className="px-6 py-4 text-slate-600">
-                      PHP{" "}
-                      {Number(product.price).toLocaleString("en-PH", {
-                        minimumFractionDigits: 2,
-                        maximumFractionDigits: 2,
-                      })}
+                    <td className="px-6 py-4 text-[#514940]">
+                      PHP {formatPrice(product.price)}
                     </td>
 
-                    <td className="px-6 py-4 text-slate-600">
+                    <td className="px-6 py-4 text-[#514940]">
                       {product.stock_quantity}
                     </td>
 
                     <td className="px-6 py-4">
                       <span
-                        className={`rounded-full px-3 py-1 text-xs font-medium ${
+                        className={`inline-flex rounded-full px-3 py-1 text-xs font-medium ${
                           product.is_active
-                            ? "bg-green-100 text-green-700"
-                            : "bg-slate-100 text-slate-600"
+                            ? "bg-[#E8EFE7] text-[#45634A]"
+                            : "bg-[#F0EDE8] text-[#756D63]"
                         }`}
                       >
                         {product.is_active ? "Active" : "Inactive"}
@@ -407,31 +459,7 @@ const ProductsPage = () => {
                     </td>
 
                     <td className="px-6 py-4">
-                      <Button
-                        variant="secondary"
-                        onClick={() => handleOpenEditProduct(product)}
-                        tooltip="Edit product"
-                        className="border-0 bg-transparent px-2 py-2 text-slate-600 shadow-none hover:bg-slate-100 hover:text-indigo-600 cursor-pointer"
-                      >
-                        <Pencil size={16} />
-                      </Button>
-
-                      <Button
-                        variant="secondary"
-                        onClick={() => handleToggleProductStatus(product)}
-                        tooltip={
-                          product.is_active
-                            ? "Deactivate product"
-                            : "Reactivate product"
-                        }
-                        className={`border-0 bg-transparent px-2 py-2 shadow-none cursor-pointer ${
-                          product.is_active
-                            ? "text-orange-600! hover:bg-orange-50!"
-                            : "text-green-600! hover:bg-green-50!"
-                        }`}
-                      >
-                        <Power size={16} />
-                      </Button>
+                      {renderProductActions(product)}
                     </td>
                   </tr>
                 ))
@@ -440,8 +468,72 @@ const ProductsPage = () => {
           </table>
         </div>
 
+        {/* Mobile Product Cards */}
+        <div className="divide-y divide-[#EEE8DD] md:hidden">
+          {isLoading && products.length === 0 ? (
+            <div className="flex flex-col items-center gap-3 px-6 py-16 text-center text-[#8A8176]">
+              <RefreshCw className="animate-spin text-[#B3261E]" size={28} />
+              <p>Loading products...</p>
+            </div>
+          ) : products.length === 0 ? (
+            <div className="px-6 py-12 text-center text-[#8A8176]">
+              {debouncedSearch
+                ? "No products match your search."
+                : "No products found."}
+            </div>
+          ) : (
+            products.map((product) => (
+              <div key={product.id} className="space-y-4 p-5">
+                <div className="flex items-start justify-between gap-3">
+                  <div className="min-w-0">
+                    <h3 className="break-words font-semibold text-[#1C1C1C]">
+                      {product.name}
+                    </h3>
+
+                    <p className="mt-1 text-sm text-[#8A8176]">
+                      {product.category_name ||
+                        product.category ||
+                        "Uncategorized"}
+                    </p>
+                  </div>
+
+                  <span
+                    className={`shrink-0 rounded-full px-3 py-1 text-xs font-medium ${
+                      product.is_active
+                        ? "bg-[#E8EFE7] text-[#45634A]"
+                        : "bg-[#F0EDE8] text-[#756D63]"
+                    }`}
+                  >
+                    {product.is_active ? "Active" : "Inactive"}
+                  </span>
+                </div>
+
+                <div className="grid grid-cols-2 gap-4 rounded-lg border border-[#EEE8DD] bg-[#FAF8F4] p-3">
+                  <div>
+                    <p className="text-xs text-[#8A8176]">Price</p>
+                    <p className="mt-1 text-sm font-semibold text-[#1C1C1C]">
+                      PHP {formatPrice(product.price)}
+                    </p>
+                  </div>
+
+                  <div>
+                    <p className="text-xs text-[#8A8176]">Stock</p>
+                    <p className="mt-1 text-sm font-semibold text-[#1C1C1C]">
+                      {product.stock_quantity}
+                    </p>
+                  </div>
+                </div>
+
+                <div className="flex justify-end border-t border-[#EEE8DD] pt-2">
+                  {renderProductActions(product)}
+                </div>
+              </div>
+            ))
+          )}
+        </div>
+
         {/* Pagination */}
-        <div className="border-t border-slate-200 px-6 py-4">
+        <div className="border-t border-[#E4DCCE] bg-[#FAF8F4] px-5 py-4 sm:px-6">
           <Pagination
             currentPage={currentPage}
             totalPages={pagination.totalPages}
@@ -454,15 +546,16 @@ const ProductsPage = () => {
 
       {/* Create Product Modal */}
       {isCreateModalOpen && (
-        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/50 p-4">
-          <div className="w-full max-w-2xl rounded-xl border border-slate-200 bg-white shadow-xl">
-            <div className="flex items-center justify-between border-b border-slate-200 p-6">
+        <div className="fixed inset-0 z-50 flex items-center justify-center overflow-y-auto bg-[#1C1C1C]/55 p-3 backdrop-blur-[2px] sm:p-4">
+          <div className="flex max-h-[90dvh] w-full max-w-2xl flex-col overflow-hidden rounded-xl border border-[#E4DCCE] bg-white shadow-2xl">
+            {/* Modal Header */}
+            <div className="flex shrink-0 items-center justify-between gap-4 border-b border-[#E4DCCE] bg-[#FAF8F4] px-5 py-4 sm:px-6">
               <div>
-                <h2 className="text-xl font-semibold text-slate-900">
+                <h2 className="text-lg font-semibold text-[#1C1C1C] sm:text-xl">
                   Add New Product
                 </h2>
 
-                <p className="mt-1 text-sm text-slate-500">
+                <p className="mt-1 text-xs text-[#8A8176] sm:text-sm">
                   Create a new product for your marketplace.
                 </p>
               </div>
@@ -470,178 +563,183 @@ const ProductsPage = () => {
               <button
                 type="button"
                 onClick={handleCloseCreateModal}
-                className="rounded-lg px-3 py-2 text-slate-500 hover:bg-slate-100 hover:text-slate-900"
+                aria-label="Close create product modal"
+                className="shrink-0 rounded-lg px-3 py-2 text-[#8A8176] transition hover:bg-[#EDE6D8] hover:text-[#1C1C1C] focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-[#B3261E]"
               >
                 ✕
               </button>
             </div>
 
-            <form onSubmit={handleCreateProduct} className="p-6">
-              <div className="mb-6">
-                <label
-                  htmlFor="name"
-                  className="mb-2 block text-sm font-medium text-slate-700"
-                >
-                  Product Name
-                </label>
+            {/* Modal Form */}
+            <form
+              onSubmit={handleCreateProduct}
+              className="flex min-h-0 flex-1 flex-col overflow-hidden"
+            >
+              {/* Scrollable Form Body */}
+              <div className="min-h-0 flex-1 space-y-5 overflow-y-auto p-5 sm:p-6">
+                <div className="grid grid-cols-1 gap-5 sm:grid-cols-2">
+                  <div className="sm:col-span-2">
+                    <label htmlFor="name" className={labelClassName}>
+                      Product Name
+                    </label>
 
-                <input
-                  type="text"
-                  id="name"
-                  name="name"
-                  value={formData.name}
-                  onChange={(e) =>
-                    setFormData({ ...formData, name: e.target.value })
-                  }
-                  placeholder="Enter product name"
-                  className="w-full rounded-lg border border-slate-300 px-4 py-3 text-sm outline-none focus:border-indigo-500 focus:ring-2 focus:ring-indigo-100"
-                />
-              </div>
-
-              <div className="mb-6">
-                <label
-                  htmlFor="description"
-                  className="mb-2 block text-sm font-medium text-slate-700"
-                >
-                  Description
-                </label>
-
-                <textarea
-                  id="description"
-                  name="description"
-                  rows="4"
-                  value={formData.description}
-                  onChange={(e) =>
-                    setFormData({ ...formData, description: e.target.value })
-                  }
-                  placeholder="Describe your product"
-                  className="w-full rounded-lg border border-slate-300 px-4 py-3 text-sm outline-none focus:border-indigo-500 focus:ring-2 focus:ring-indigo-100"
-                />
-              </div>
-
-              <div className="mb-6">
-                <label
-                  htmlFor="price"
-                  className="mb-2 block text-sm font-medium text-slate-700"
-                >
-                  Price (PHP)
-                </label>
-
-                <input
-                  type="number"
-                  id="price"
-                  name="price"
-                  min="0.01"
-                  step="0.01"
-                  value={formData.price}
-                  onChange={(e) =>
-                    setFormData({ ...formData, price: e.target.value })
-                  }
-                  placeholder="0.00"
-                  className="w-full rounded-lg border border-slate-300 px-4 py-3 text-sm outline-none focus:border-indigo-500 focus:ring-2 focus:ring-indigo-100"
-                />
-              </div>
-
-              <div className="mb-6">
-                <label
-                  htmlFor="stock_quantity"
-                  className="mb-2 block text-sm font-medium text-slate-700"
-                >
-                  Stock Quantity
-                </label>
-
-                <input
-                  type="number"
-                  id="stock_quantity"
-                  name="stock_quantity"
-                  min="0"
-                  step="1"
-                  value={formData.stock_quantity}
-                  onChange={(e) =>
-                    setFormData({ ...formData, stock_quantity: e.target.value })
-                  }
-                  placeholder="Enter available stock"
-                  className="w-full rounded-lg border border-slate-300 px-4 py-3 text-sm outline-none focus:border-indigo-500 focus:ring-2 focus:ring-indigo-100"
-                />
-              </div>
-
-              <div>
-                <label
-                  htmlFor="product_image"
-                  className="mb-2 block text-sm font-medium text-slate-700"
-                >
-                  Product Image
-                </label>
-
-                <input
-                  id="product_image"
-                  type="file"
-                  accept="image/jpeg,image/png,image/webp"
-                  onChange={handleImageUpload}
-                  disabled={isUploading}
-                  className="block w-full text-sm text-slate-600 file:mr-4 file:rounded-lg file:border-0 file:bg-indigo-50 file:px-4 file:py-2 file:font-medium file:text-indigo-700 hover:file:bg-indigo-100 disabled:opacity-50"
-                />
-
-                <p className="mt-1 text-xs text-slate-500">
-                  JPG, PNG, or WebP. Maximum file size: 5 MB.
-                </p>
-
-                {isUploading && (
-                  <p className="mt-2 text-sm text-indigo-600">
-                    Uploading image...
-                  </p>
-                )}
-
-                <div className="mt-3">
-                  {imagePreview && (
-                    <img
-                      src={imagePreview}
-                      alt="Product preview"
-                      className="mt-2 h-32 w-32 rounded-lg border border-slate-200 object-cover"
+                    <input
+                      type="text"
+                      id="name"
+                      name="name"
+                      value={formData.name}
+                      onChange={(e) =>
+                        setFormData({ ...formData, name: e.target.value })
+                      }
+                      placeholder="Enter product name"
+                      className={inputClassName}
                     />
-                  )}
+                  </div>
+
+                  <div>
+                    <label htmlFor="price" className={labelClassName}>
+                      Price (PHP)
+                    </label>
+
+                    <input
+                      type="number"
+                      id="price"
+                      name="price"
+                      min="0.01"
+                      step="0.01"
+                      value={formData.price}
+                      onChange={(e) =>
+                        setFormData({ ...formData, price: e.target.value })
+                      }
+                      placeholder="0.00"
+                      className={inputClassName}
+                    />
+                  </div>
+
+                  <div>
+                    <label htmlFor="stock_quantity" className={labelClassName}>
+                      Stock Quantity
+                    </label>
+
+                    <input
+                      type="number"
+                      id="stock_quantity"
+                      name="stock_quantity"
+                      min="0"
+                      step="1"
+                      value={formData.stock_quantity}
+                      onChange={(e) =>
+                        setFormData({
+                          ...formData,
+                          stock_quantity: e.target.value,
+                        })
+                      }
+                      placeholder="Enter available stock"
+                      className={inputClassName}
+                    />
+                  </div>
+
+                  <div className="sm:col-span-2">
+                    <label htmlFor="description" className={labelClassName}>
+                      Description
+                    </label>
+
+                    <textarea
+                      id="description"
+                      name="description"
+                      rows="3"
+                      value={formData.description}
+                      onChange={(e) =>
+                        setFormData({
+                          ...formData,
+                          description: e.target.value,
+                        })
+                      }
+                      placeholder="Describe your product"
+                      className={`${inputClassName} resize-y`}
+                    />
+                  </div>
+
+                  <div>
+                    <label htmlFor="product_image" className={labelClassName}>
+                      Product Image
+                    </label>
+
+                    <input
+                      id="product_image"
+                      type="file"
+                      accept="image/jpeg,image/png,image/webp"
+                      onChange={handleImageUpload}
+                      disabled={isUploading}
+                      className="block w-full text-xs text-[#6B6258] file:mr-2 file:rounded-md file:border-0 file:bg-[#EDE6D8] file:px-3 file:py-2 file:font-medium file:text-[#514940] transition hover:file:bg-[#E4DCCE] disabled:opacity-50"
+                    />
+
+                    <p className="mt-1 text-xs text-[#8A8176]">
+                      JPG, PNG, or WebP. Maximum 5 MB.
+                    </p>
+
+                    {isUploading && (
+                      <p className="mt-2 text-xs font-medium text-[#B3261E]">
+                        Uploading image...
+                      </p>
+                    )}
+
+                    {imagePreview && (
+                      <img
+                        src={imagePreview}
+                        alt="Product preview"
+                        className="mt-3 h-20 w-20 rounded-lg border border-[#E4DCCE] object-cover"
+                      />
+                    )}
+                  </div>
+
+                  <div>
+                    <label htmlFor="category_id" className={labelClassName}>
+                      Category
+                    </label>
+
+                    <select
+                      id="category_id"
+                      name="category_id"
+                      value={formData.category_id}
+                      onChange={(e) =>
+                        setFormData({
+                          ...formData,
+                          category_id: e.target.value,
+                        })
+                      }
+                      className={`${inputClassName} cursor-pointer`}
+                    >
+                      <option value="" disabled>
+                        Select a category
+                      </option>
+
+                      {categories.map((category) => (
+                        <option key={category.id} value={category.id}>
+                          {category.name}
+                        </option>
+                      ))}
+                    </select>
+                  </div>
                 </div>
               </div>
 
-              <div>
-                <label
-                  htmlFor="category_id"
-                  className="mb-2 block text-sm font-medium text-slate-700"
-                >
-                  Category
-                </label>
-
-                <select
-                  id="category_id"
-                  name="category_id"
-                  value={formData.category_id}
-                  onChange={(e) =>
-                    setFormData({ ...formData, category_id: e.target.value })
-                  }
-                  className="w-full rounded-lg border border-slate-300 px-4 py-3 text-sm outline-none focus:border-indigo-500 focus:ring-2 focus:ring-indigo-100"
-                >
-                  <option value="" disabled>
-                    Select a category
-                  </option>
-
-                  {categories.map((category) => (
-                    <option key={category.id} value={category.id}>
-                      {category.name}
-                    </option>
-                  ))}
-                </select>
-              </div>
-
-              <div className="mt-8 flex justify-end gap-3 border-t border-slate-200 pt-6">
+              {/* Fixed Modal Footer */}
+              <div className="flex shrink-0 justify-end gap-3 border-t border-[#E4DCCE] bg-[#FAF8F4] px-5 py-4 sm:px-6">
                 <Button
                   type="button"
                   variant="secondary"
                   onClick={handleCloseCreateModal}
+                  className="rounded-md border border-[#E4DCCE] bg-white px-4 text-[#514940] shadow-none hover:bg-[#F5F1E9]"
                 >
                   Cancel
                 </Button>
 
-                <Button type="submit" disabled={isUploading}>
+                <Button
+                  type="submit"
+                  disabled={isUploading}
+                  className="rounded-md bg-[#B3261E] px-4 text-white shadow-none hover:bg-[#941F19] disabled:opacity-50"
+                >
                   {isUploading ? "Uploading Image..." : "Save Product"}
                 </Button>
               </div>
@@ -652,193 +750,214 @@ const ProductsPage = () => {
 
       {/* Edit Product Modal */}
       {isEditModalOpen && selectedProduct && (
-        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/50 p-4">
-          <div className="w-full max-w-2xl rounded-xl border border-slate-200 bg-white shadow-xl">
-            <div className="flex items-center justify-between border-b border-slate-200 p-6">
+        <div className="fixed inset-0 z-50 flex items-center justify-center overflow-y-auto bg-[#1C1C1C]/55 p-3 backdrop-blur-[2px] sm:p-4">
+          <div className="flex max-h-[90dvh] w-full max-w-2xl flex-col overflow-hidden rounded-xl border border-[#E4DCCE] bg-white shadow-2xl">
+            {/* Modal Header */}
+            <div className="flex shrink-0 items-center justify-between gap-4 border-b border-[#E4DCCE] bg-[#FAF8F4] px-5 py-4 sm:px-6">
               <div>
-                <h2 className="text-xl font-semibold text-slate-900">
+                <h2 className="text-lg font-semibold text-[#1C1C1C] sm:text-xl">
                   Edit Product
                 </h2>
 
-                <p className="mt-1 text-sm text-slate-500">
+                <p className="mt-1 text-xs text-[#8A8176] sm:text-sm">
                   Update product details.
                 </p>
               </div>
 
               <button
                 type="button"
-                onClick={() => setIsEditModalOpen(false)}
-                className="rounded-lg px-3 py-2 text-slate-500 hover:bg-slate-100 hover:text-slate-900"
+                onClick={handleCloseEditModal}
+                aria-label="Close edit product modal"
+                className="shrink-0 rounded-lg px-3 py-2 text-[#8A8176] transition hover:bg-[#EDE6D8] hover:text-[#1C1C1C] focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-[#B3261E]"
               >
                 ✕
               </button>
             </div>
 
-            <form onSubmit={handleUpdateProduct} className="p-6">
-              <div className="mb-6">
-                <label
-                  htmlFor="edit_name"
-                  className="mb-2 block text-sm font-medium text-slate-700"
-                >
-                  Product Name
-                </label>
+            {/* Modal Form */}
+            <form
+              onSubmit={handleUpdateProduct}
+              className="flex min-h-0 flex-1 flex-col overflow-hidden"
+            >
+              {/* Scrollable Form Body */}
+              <div className="min-h-0 flex-1 space-y-5 overflow-y-auto p-5 sm:p-6">
+                <div className="grid grid-cols-1 gap-5 sm:grid-cols-2">
+                  <div className="sm:col-span-2">
+                    <label htmlFor="edit_name" className={labelClassName}>
+                      Product Name
+                    </label>
 
-                <input
-                  type="text"
-                  id="edit_name"
-                  value={formData.name}
-                  onChange={(e) =>
-                    setFormData({ ...formData, name: e.target.value })
-                  }
-                  className="w-full rounded-lg border border-slate-300 px-4 py-3 text-sm outline-none focus:border-indigo-500 focus:ring-2 focus:ring-indigo-100"
-                />
+                    <input
+                      type="text"
+                      id="edit_name"
+                      value={formData.name}
+                      onChange={(e) =>
+                        setFormData({ ...formData, name: e.target.value })
+                      }
+                      className={inputClassName}
+                    />
+                  </div>
+
+                  <div>
+                    <label htmlFor="edit_price" className={labelClassName}>
+                      Price (PHP)
+                    </label>
+
+                    <input
+                      type="number"
+                      id="edit_price"
+                      min="0.01"
+                      step="0.01"
+                      value={formData.price}
+                      onChange={(e) =>
+                        setFormData({ ...formData, price: e.target.value })
+                      }
+                      className={inputClassName}
+                    />
+                  </div>
+
+                  <div>
+                    <label htmlFor="edit_stock" className={labelClassName}>
+                      Stock Quantity
+                    </label>
+
+                    <input
+                      type="number"
+                      id="edit_stock"
+                      min="0"
+                      step="1"
+                      value={formData.stock_quantity}
+                      onChange={(e) =>
+                        setFormData({
+                          ...formData,
+                          stock_quantity: e.target.value,
+                        })
+                      }
+                      className={inputClassName}
+                    />
+                  </div>
+
+                  <div className="sm:col-span-2">
+                    <label
+                      htmlFor="edit_description"
+                      className={labelClassName}
+                    >
+                      Description
+                    </label>
+
+                    <textarea
+                      id="edit_description"
+                      rows="3"
+                      value={formData.description}
+                      onChange={(e) =>
+                        setFormData({
+                          ...formData,
+                          description: e.target.value,
+                        })
+                      }
+                      className={`${inputClassName} resize-y`}
+                    />
+                  </div>
+
+                  <div>
+                    <label
+                      htmlFor="edit_product_image"
+                      className={labelClassName}
+                    >
+                      Product Image
+                    </label>
+
+                    <input
+                      id="edit_product_image"
+                      type="file"
+                      accept="image/jpeg,image/png,image/webp"
+                      onChange={handleImageUpload}
+                      disabled={isUploading}
+                      className="block w-full text-xs text-[#6B6258] file:mr-2 file:rounded-md file:border-0 file:bg-[#EDE6D8] file:px-3 file:py-2 file:font-medium file:text-[#514940] transition hover:file:bg-[#E4DCCE] disabled:opacity-50"
+                    />
+
+                    <p className="mt-1 text-xs text-[#8A8176]">
+                      JPG, PNG, or WebP. Maximum 5 MB.
+                    </p>
+
+                    {isUploading && (
+                      <p className="mt-2 text-xs font-medium text-[#B3261E]">
+                        Uploading image...
+                      </p>
+                    )}
+
+                    {imagePreview && (
+                      <img
+                        src={imagePreview}
+                        alt="Product preview"
+                        className="mt-3 h-20 w-20 rounded-lg border border-[#E4DCCE] object-cover"
+                      />
+                    )}
+                  </div>
+
+                  <div>
+                    <label htmlFor="edit_category" className={labelClassName}>
+                      Category
+                    </label>
+
+                    <select
+                      id="edit_category"
+                      value={formData.category_id}
+                      onChange={(e) =>
+                        setFormData({
+                          ...formData,
+                          category_id: e.target.value,
+                        })
+                      }
+                      className={`${inputClassName} cursor-pointer`}
+                    >
+                      <option value="" disabled>
+                        Select a category
+                      </option>
+
+                      {categories.map((category) => (
+                        <option key={category.id} value={category.id}>
+                          {category.name}
+                        </option>
+                      ))}
+                    </select>
+                  </div>
+                </div>
+
+                <div className="border-t border-[#EEE8DD] pt-4">
+                  <label className="flex items-center gap-3 text-sm font-medium text-[#514940]">
+                    <input
+                      type="checkbox"
+                      checked={formData.is_active}
+                      onChange={(e) =>
+                        setFormData({
+                          ...formData,
+                          is_active: e.target.checked,
+                        })
+                      }
+                      className="h-4 w-4 rounded border-[#CFC5B7] accent-[#B3261E] focus:ring-[#B3261E]"
+                    />
+                    Active Product
+                  </label>
+                </div>
               </div>
 
-              <div className="mb-6">
-                <label
-                  htmlFor="edit_description"
-                  className="mb-2 block text-sm font-medium text-slate-700"
-                >
-                  Description
-                </label>
-
-                <textarea
-                  id="edit_description"
-                  rows="4"
-                  value={formData.description}
-                  onChange={(e) =>
-                    setFormData({ ...formData, description: e.target.value })
-                  }
-                  className="w-full rounded-lg border border-slate-300 px-4 py-3 text-sm outline-none focus:border-indigo-500 focus:ring-2 focus:ring-indigo-100"
-                />
-              </div>
-
-              <div className="mb-6">
-                <label
-                  htmlFor="edit_price"
-                  className="mb-2 block text-sm font-medium text-slate-700"
-                >
-                  Price (PHP)
-                </label>
-
-                <input
-                  type="number"
-                  id="edit_price"
-                  min="0.01"
-                  step="0.01"
-                  value={formData.price}
-                  onChange={(e) =>
-                    setFormData({ ...formData, price: e.target.value })
-                  }
-                  className="w-full rounded-lg border border-slate-300 px-4 py-3 text-sm outline-none focus:border-indigo-500 focus:ring-2 focus:ring-indigo-100"
-                />
-              </div>
-
-              <div className="mb-6">
-                <label
-                  htmlFor="edit_stock"
-                  className="mb-2 block text-sm font-medium text-slate-700"
-                >
-                  Stock Quantity
-                </label>
-
-                <input
-                  type="number"
-                  id="edit_stock"
-                  min="0"
-                  step="1"
-                  value={formData.stock_quantity}
-                  onChange={(e) =>
-                    setFormData({ ...formData, stock_quantity: e.target.value })
-                  }
-                  className="w-full rounded-lg border border-slate-300 px-4 py-3 text-sm outline-none focus:border-indigo-500 focus:ring-2 focus:ring-indigo-100"
-                />
-              </div>
-
-              <div className="mb-6">
-                <label
-                  htmlFor="edit_category"
-                  className="mb-2 block text-sm font-medium text-slate-700"
-                >
-                  Category
-                </label>
-
-                <select
-                  id="edit_category"
-                  value={formData.category_id}
-                  onChange={(e) =>
-                    setFormData({ ...formData, category_id: e.target.value })
-                  }
-                  className="w-full rounded-lg border border-slate-300 px-4 py-3 text-sm outline-none focus:border-indigo-500 focus:ring-2 focus:ring-indigo-100"
-                >
-                  <option value="" disabled>
-                    Select a category
-                  </option>
-
-                  {categories.map((category) => (
-                    <option key={category.id} value={category.id}>
-                      {category.name}
-                    </option>
-                  ))}
-                </select>
-              </div>
-
-              <div className="mb-6">
-                <label
-                  htmlFor="edit_product_image"
-                  className="mb-2 block text-sm font-medium text-slate-700"
-                >
-                  Product Image
-                </label>
-
-                <input
-                  id="edit_product_image"
-                  type="file"
-                  accept="image/jpeg,image/png,image/webp"
-                  onChange={handleImageUpload}
-                  disabled={isUploading}
-                  className="block w-full text-sm text-slate-600"
-                />
-
-                {isUploading && (
-                  <p className="mt-2 text-sm text-indigo-600">
-                    Uploading image...
-                  </p>
-                )}
-
-                {imagePreview && (
-                  <img
-                    src={imagePreview}
-                    alt="Product preview"
-                    className="mt-3 h-32 w-32 rounded-lg border border-slate-200 object-cover"
-                  />
-                )}
-              </div>
-
-              <div className="mb-6">
-                <label className="flex items-center gap-3 text-sm font-medium text-slate-700">
-                  <input
-                    type="checkbox"
-                    checked={formData.is_active}
-                    onChange={(e) =>
-                      setFormData({ ...formData, is_active: e.target.checked })
-                    }
-                    className="h-4 w-4 rounded border-slate-300"
-                  />
-                  Active Product
-                </label>
-              </div>
-
-              <div className="mt-8 flex justify-end gap-3 border-t border-slate-200 pt-6">
+              {/* Fixed Modal Footer */}
+              <div className="flex shrink-0 justify-end gap-3 border-t border-[#E4DCCE] bg-[#FAF8F4] px-5 py-4 sm:px-6">
                 <Button
                   type="button"
                   variant="secondary"
-                  onClick={() => setIsEditModalOpen(false)}
+                  onClick={handleCloseEditModal}
+                  className="rounded-md border border-[#E4DCCE] bg-white px-4 text-[#514940] shadow-none hover:bg-[#F5F1E9]"
                 >
                   Cancel
                 </Button>
 
-                <Button type="submit" disabled={isUploading}>
+                <Button
+                  type="submit"
+                  disabled={isUploading}
+                  className="rounded-md bg-[#B3261E] px-4 text-white shadow-none hover:bg-[#941F19] disabled:opacity-50"
+                >
                   {isUploading ? "Uploading Image..." : "Save Changes"}
                 </Button>
               </div>
@@ -846,6 +965,64 @@ const ProductsPage = () => {
           </div>
         </div>
       )}
+
+      {/* Product Status Confirmation */}
+      <AlertDialog
+        open={isStatusDialogOpen}
+        onOpenChange={handleStatusDialogOpenChange}
+      >
+        <AlertDialogContent>
+          <AlertDialogHeader>
+            <AlertDialogTitle className="text-[#1C1C1C]">
+              {productToToggle?.is_active
+                ? "Deactivate Product?"
+                : "Reactivate Product?"}
+            </AlertDialogTitle>
+
+            <AlertDialogDescription className="text-[#6B6258]">
+              Are you sure you want to{" "}
+              {productToToggle?.is_active ? "deactivate" : "reactivate"}{" "}
+              <span className="font-semibold text-[#1C1C1C]">
+                {productToToggle?.name}
+              </span>
+              ?
+              {productToToggle?.is_active
+                ? " This product will no longer be available in your storefront."
+                : " This product will become available in your storefront again."}
+            </AlertDialogDescription>
+          </AlertDialogHeader>
+
+          <AlertDialogFooter>
+            <AlertDialogCancel
+              disabled={isStatusUpdating}
+              className="border-[#E4DCCE] text-[#514940] hover:bg-[#F5F1E9]"
+            >
+              Cancel
+            </AlertDialogCancel>
+
+            <AlertDialogAction
+              type="button"
+              onClick={handleConfirmProductStatusChange}
+              disabled={isStatusUpdating}
+              className={
+                productToToggle?.is_active
+                  ? "bg-[#B3261E] text-white hover:bg-[#941F19]"
+                  : "bg-[#55745B] text-white hover:bg-[#3E6045]"
+              }
+            >
+              {isStatusUpdating && (
+                <RefreshCw size={16} className="mr-2 animate-spin" />
+              )}
+
+              {isStatusUpdating
+                ? "Processing..."
+                : productToToggle?.is_active
+                  ? "Deactivate Product"
+                  : "Reactivate Product"}
+            </AlertDialogAction>
+          </AlertDialogFooter>
+        </AlertDialogContent>
+      </AlertDialog>
     </main>
   );
 };

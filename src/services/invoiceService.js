@@ -71,19 +71,18 @@ export const generateInvoice = (order) => {
 
   const documentDefinition = {
     pageSize: "A4",
-
     pageMargins: [40, 45, 40, 60],
 
     info: {
       title: `Invoice ${order.orderNumber || order.id}`,
-      author: "Marketplace",
+      author: "AVÉRO",
       subject: "Customer Order Invoice",
     },
 
     defaultStyle: {
       font: "Roboto",
       fontSize: 9,
-      color: "#334155",
+      color: "#6B6258",
     },
 
     content: [
@@ -94,11 +93,11 @@ export const generateInvoice = (order) => {
             width: "*",
             stack: [
               {
-                text: "MARKETPLACE",
+                text: "AVÉRO",
                 style: "brand",
               },
               {
-                text: "Your trusted online shopping destination",
+                text: "Thoughtfully selected. Made for everyday living.",
                 style: "brandSubtitle",
               },
             ],
@@ -112,7 +111,7 @@ export const generateInvoice = (order) => {
                 alignment: "right",
               },
               {
-                text: "OFFICIAL ORDER RECEIPT",
+                text: "CUSTOMER ORDER INVOICE",
                 style: "invoiceSubtitle",
                 alignment: "right",
               },
@@ -130,7 +129,7 @@ export const generateInvoice = (order) => {
             x2: 515,
             y2: 0,
             lineWidth: 1,
-            lineColor: "#E2E8F0",
+            lineColor: "#E4DCCE",
           },
         ],
         margin: [0, 15, 0, 18],
@@ -266,7 +265,7 @@ export const generateInvoice = (order) => {
           paddingRight: () => 10,
           paddingTop: () => 8,
           paddingBottom: () => 8,
-          fillColor: (rowIndex) => (rowIndex === 0 ? "#F1F5F9" : "#F8FAFC"),
+          fillColor: (rowIndex) => (rowIndex === 0 ? "#EDE6D8" : "#FAF8F4"),
         },
         margin: [0, 0, 0, 25],
       },
@@ -283,7 +282,6 @@ export const generateInvoice = (order) => {
           headerRows: 1,
           keepWithHeaderRows: 1,
           dontBreakRows: true,
-
           widths: ["*", 40, 90, 95],
 
           body: [
@@ -315,7 +313,7 @@ export const generateInvoice = (order) => {
 
         layout: {
           hLineWidth: (i) => (i === 1 ? 1 : 0.5),
-          hLineColor: () => "#E2E8F0",
+          hLineColor: () => "#E4DCCE",
           vLineWidth: () => 0,
           paddingLeft: () => 8,
           paddingRight: () => 8,
@@ -373,13 +371,13 @@ export const generateInvoice = (order) => {
             },
             layout: {
               hLineWidth: (i) => (i === 2 ? 1 : 0),
-              hLineColor: () => "#CBD5E1",
+              hLineColor: () => "#D8CFC1",
               vLineWidth: () => 0,
               paddingLeft: () => 8,
               paddingRight: () => 8,
-              paddingTop: () => 10,
-              paddingBottom: () => 10,
-              fillColor: (rowIndex) => (rowIndex === 2 ? "#EEF2FF" : null),
+              paddingTop: (rowIndex) => (rowIndex === 2 ? 12 : 10),
+              paddingBottom: (rowIndex) => (rowIndex === 2 ? 12 : 10),
+              fillColor: (rowIndex) => (rowIndex === 2 ? "#EDE6D8" : null),
             },
           },
         ],
@@ -396,14 +394,14 @@ export const generateInvoice = (order) => {
             x2: 515,
             y2: 0,
             lineWidth: 1,
-            lineColor: "#E2E8F0",
+            lineColor: "#E4DCCE",
           },
         ],
         margin: [0, 0, 0, 15],
       },
 
       {
-        text: "Thank you for shopping with Marketplace!",
+        text: "Thank you for shopping with AVÉRO!",
         style: "thankYou",
         alignment: "center",
       },
@@ -420,7 +418,7 @@ export const generateInvoice = (order) => {
     footer: (currentPage, pageCount) => ({
       columns: [
         {
-          text: "MARKETPLACE  |  Electronically Generated Invoice",
+          text: "AVÉRO  |  Electronically Generated Invoice",
           alignment: "left",
         },
         {
@@ -430,7 +428,7 @@ export const generateInvoice = (order) => {
       ],
       margin: [40, 15, 40, 0],
       fontSize: 8,
-      color: "#94A3B8",
+      color: "#8A8176",
     }),
 
     // Document Styles
@@ -438,33 +436,33 @@ export const generateInvoice = (order) => {
       brand: {
         fontSize: 21,
         bold: true,
-        color: "#4F46E5",
-        characterSpacing: 0.5,
+        color: "#B3261E",
+        characterSpacing: 1,
       },
 
       brandSubtitle: {
         fontSize: 8,
-        color: "#64748B",
+        color: "#6B6258",
         margin: [0, 4, 0, 0],
       },
 
       invoiceTitle: {
         fontSize: 25,
         bold: true,
-        color: "#1E293B",
+        color: "#1C1C1C",
       },
 
       invoiceSubtitle: {
         fontSize: 7,
         bold: true,
-        color: "#64748B",
+        color: "#8A8176",
         margin: [0, 4, 0, 0],
       },
 
       sectionLabel: {
         fontSize: 7,
         bold: true,
-        color: "#94A3B8",
+        color: "#8A8176",
         characterSpacing: 0.5,
         margin: [0, 0, 0, 5],
       },
@@ -472,91 +470,91 @@ export const generateInvoice = (order) => {
       orderValue: {
         fontSize: 9,
         bold: true,
-        color: "#1E293B",
+        color: "#1C1C1C",
       },
 
       sectionTitle: {
         fontSize: 10,
         bold: true,
-        color: "#4F46E5",
+        color: "#B3261E",
         characterSpacing: 0.5,
       },
 
       detailBold: {
         fontSize: 9,
         bold: true,
-        color: "#1E293B",
+        color: "#1C1C1C",
         margin: [0, 3, 0, 3],
       },
 
       detail: {
         fontSize: 9,
-        color: "#475569",
+        color: "#6B6258",
         margin: [0, 3, 0, 3],
       },
 
       paymentHeader: {
         fontSize: 7,
         bold: true,
-        color: "#64748B",
+        color: "#6B6258",
       },
 
       paymentValue: {
         fontSize: 8,
         bold: true,
-        color: "#1E293B",
+        color: "#1C1C1C",
       },
 
       tableHeader: {
         fontSize: 8,
         bold: true,
         color: "#FFFFFF",
-        fillColor: "#4F46E5",
+        fillColor: "#B3261E",
         margin: [0, 3, 0, 3],
       },
 
       tableCell: {
         fontSize: 8,
-        color: "#475569",
+        color: "#6B6258",
       },
 
       tableCellBold: {
         fontSize: 8,
         bold: true,
-        color: "#1E293B",
+        color: "#1C1C1C",
       },
 
       summaryLabel: {
         fontSize: 9,
-        color: "#64748B",
+        color: "#6B6258",
       },
 
       summaryValue: {
         fontSize: 9,
-        color: "#334155",
+        color: "#1C1C1C",
       },
 
       grandTotalLabel: {
         fontSize: 10,
         bold: true,
-        color: "#312E81",
+        color: "#1C1C1C",
       },
 
       grandTotalValue: {
         fontSize: 12,
         bold: true,
-        color: "#4F46E5",
+        color: "#B3261E",
       },
 
       thankYou: {
         fontSize: 11,
         bold: true,
-        color: "#1E293B",
+        color: "#1C1C1C",
       },
 
       footerMessage: {
         fontSize: 8,
-        color: "#94A3B8",
+        color: "#8A8176",
       },
     },
   };

@@ -36,7 +36,13 @@ const apiRequest = async (endpoint, options = {}) => {
   }
 
   if (!response.ok) {
-    throw new Error(data.message || `API request failed: ${response.status}`);
+    const error = new Error(
+      data.message || `API request failed: ${response.status}`,
+    );
+
+    error.errors = data.errors || [];
+
+    throw error;
   }
 
   return data;
@@ -45,6 +51,11 @@ const apiRequest = async (endpoint, options = {}) => {
 export const getProducts = async () => {
   const response = await apiRequest("/products");
   return response.data.products;
+};
+
+export const getProductById = async (id) => {
+  const response = await apiRequest(`/products/${id}`);
+  return response.data.product;
 };
 
 export const getCategories = async () => {
