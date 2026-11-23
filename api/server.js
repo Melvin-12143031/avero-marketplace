@@ -104,25 +104,29 @@ app.use(notFound);
 // Error Handling Middleware
 app.use(errorHandler);
 
-// Start server
-const server = app.listen(PORT, () => {
-  console.log(`Server running at http://localhost:${PORT}`);
-});
+export default app;
 
-const shutdown = async (signal) => {
-  console.log(`${signal} received. Shutting down server...`);
-
-  server.close(async () => {
-    try {
-      await pool.end();
-      console.log("Database connection pool closed.");
-      process.exit(0);
-    } catch (error) {
-      console.error("Error closing database pool:", error);
-      process.exit(1);
-    }
+// Start a local server only outside Vercel.
+if (!process.env.VERCEL) {
+  const server = app.listen(PORT, () => {
+    console.log(`Server running at http://localhost:${PORT}`);
   });
-};
 
-process.on("SIGTERM", () => shutdown("SIGTERM"));
-process.on("SIGINT", () => shutdown("SIGINT"));
+  const shutdown = async (signal) => {
+    console.log(`${signal} received. Shutting down server...`);
+
+    server.close(async () => {
+      try {
+        await pool.end();
+        console.log("Database connection pool closed.");
+        process.exit(0);
+      } catch (error) {
+        console.error("Error closing database pool:", error);
+        process.exit(1);
+      }
+    });
+  };
+
+  process.on("SIGTERM", () => shutdown("SIGTERM"));
+  process.on("SIGINT", () => shutdown("SIGINT"));
+}
