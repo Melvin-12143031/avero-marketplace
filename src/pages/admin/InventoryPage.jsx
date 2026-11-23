@@ -8,7 +8,7 @@ import {
 
 import Pagination from "../../components/ui/Pagination";
 import SearchInput from "../../components/ui/SearchInput";
-import Button from "../../components/ui/button";
+import Button from "../../components/ui/Button";
 
 import {
   Dialog,

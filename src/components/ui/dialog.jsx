@@ -1,7 +1,7 @@
 import { Dialog as DialogPrimitive } from "@base-ui/react/dialog";
 import { cn } from "cn";
 
-import { Button } from "@/components/ui/button";
+import { Button } from "@/components/ui/Button";
 import { XIcon } from "lucide-react";
 
 const Dialog = ({ ...props }) => {
